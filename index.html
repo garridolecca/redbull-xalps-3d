@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Red Bull X-Alps 2025 | 3D Race Replay &amp; Thermal Analysis</title>
+  <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/dark/main.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a12; color: #e0e0e8; }
+    #viewDiv { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+
+    /* ── LOGIN SCREEN ── */
+    #login-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: linear-gradient(135deg, #0a0a18 0%, #121228 40%, #1a0a18 100%);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .login-card {
+      width: 380px; padding: 44px 36px 36px;
+      background: rgba(20,20,36,0.85); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px; backdrop-filter: blur(30px);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    }
+    .login-brand { text-align: center; margin-bottom: 32px; }
+    .login-brand h1 { font-size: 26px; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 4px; }
+    .login-brand h1 span { color: #DB0A40; }
+    .login-brand p { font-size: 12px; color: #666; letter-spacing: 1px; text-transform: uppercase; }
+    .login-field { margin-bottom: 16px; }
+    .login-field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
+    .login-field input {
+      width: 100%; padding: 11px 14px; font-size: 14px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px; color: #e0e0e8; outline: none; transition: border-color 0.2s;
+    }
+    .login-field input:focus { border-color: #DB0A40; }
+    .login-btn {
+      width: 100%; padding: 12px; margin-top: 8px; font-size: 14px; font-weight: 600;
+      background: #DB0A40; color: #fff; border: none; border-radius: 8px;
+      cursor: pointer; letter-spacing: 0.5px; transition: background 0.2s, transform 0.1s;
+    }
+    .login-btn:hover { background: #f01050; }
+    .login-btn:active { transform: scale(0.98); }
+    .login-error { color: #ff4466; font-size: 12px; text-align: center; margin-top: 12px; min-height: 18px; }
+    .login-footer { text-align: center; margin-top: 24px; font-size: 11px; color: #444; }
+
+    /* ── INTRO MODAL ── */
+    #intro-overlay {
+      position: fixed; inset: 0; z-index: 9998;
+      background: rgba(6,6,14,0.85); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center;
+    }
+    #intro-overlay.visible { display: flex; }
+    .intro-modal {
+      width: 720px; max-width: 92vw; max-height: 88vh;
+      background: rgba(16,16,30,0.96); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #333 transparent;
+      box-shadow: 0 32px 100px rgba(0,0,0,0.7);
+    }
+    .intro-header {
+      padding: 32px 36px 20px; text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .intro-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+    .intro-header h1 span { color: #DB0A40; }
+    .intro-header p { font-size: 13px; color: #888; }
+    .intro-body { padding: 24px 36px; }
+    .intro-section { margin-bottom: 24px; }
+    .intro-section h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #DB0A40; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .intro-section h2::before { content: ''; display: block; width: 3px; height: 16px; background: #DB0A40; border-radius: 2px; }
+    .intro-section p, .intro-section li { font-size: 13px; line-height: 1.7; color: #bbb; }
+    .intro-section ul { list-style: none; padding: 0; }
+    .intro-section li { padding: 3px 0; padding-left: 16px; position: relative; }
+    .intro-section li::before { content: ''; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: #DB0A40; opacity: 0.6; }
+
+    /* Pipeline diagram */
+    .pipeline {
+      display: flex; align-items: center; justify-content: center; gap: 0;
+      margin: 16px 0; flex-wrap: wrap;
+    }
+    .pipe-step {
+      padding: 10px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+      border-radius: 8px; text-align: center; white-space: nowrap;
+    }
+    .pipe-arrow { font-size: 18px; color: #444; padding: 0 6px; }
+    .pipe-src { background: rgba(219,10,64,0.15); border: 1px solid rgba(219,10,64,0.3); color: #f06; }
+    .pipe-proc { background: rgba(255,165,0,0.12); border: 1px solid rgba(255,165,0,0.25); color: #ffa500; }
+    .pipe-out { background: rgba(52,199,89,0.12); border: 1px solid rgba(52,199,89,0.25); color: #34c759; }
+    .pipe-viz { background: rgba(50,173,230,0.12); border: 1px solid rgba(50,173,230,0.25); color: #32ade6; }
+
+    .controls-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+    .controls-table td { padding: 5px 10px; font-size: 12px; color: #bbb; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .controls-table td:first-child { color: #fff; font-weight: 600; font-family: 'Consolas', monospace; font-size: 11px; width: 140px; }
+
+    .intro-footer {
+      padding: 20px 36px 28px; text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .intro-start-btn {
+      padding: 14px 48px; font-size: 15px; font-weight: 700;
+      background: #DB0A40; color: #fff; border: none; border-radius: 10px;
+      cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
+      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 4px 24px rgba(219,10,64,0.3);
+    }
+    .intro-start-btn:hover { background: #f01050; box-shadow: 0 6px 32px rgba(219,10,64,0.5); }
+    .intro-start-btn:active { transform: scale(0.97); }
+    .help-btn {
+      position: absolute; top: 12px; right: 250px; z-index: 11;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(14,14,24,0.88); border: 1px solid rgba(255,255,255,0.1);
+      color: #aaa; font-size: 16px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(20px); transition: background 0.15s;
+    }
+    .help-btn:hover { background: rgba(219,10,64,0.3); color: #fff; }
+
+    /* ── HEADER ── */
+    #header {
+      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
+      display: flex; align-items: center; gap: 16px;
+      padding: 12px 20px;
+      background: linear-gradient(180deg, rgba(10,10,18,0.92) 0%, rgba(10,10,18,0.6) 80%, transparent 100%);
+      pointer-events: none;
+    }
+    #header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+    #header h1 span { color: #DB0A40; }
+    #header .subtitle { font-size: 12px; color: #8888a0; letter-spacing: 0.5px; }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      position: absolute; top: 70px; right: 12px; z-index: 10;
+      width: 220px; max-height: calc(100vh - 180px);
+      background: rgba(14,14,24,0.88); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; backdrop-filter: blur(20px);
+      overflow-y: auto; scrollbar-width: thin; scrollbar-color: #333 transparent;
+    }
+    #sidebar h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #6668; padding: 12px 14px 6px; }
+    .athlete-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 14px; cursor: pointer; transition: background 0.15s;
+      font-size: 13px; user-select: none;
+    }
+    .athlete-row:hover { background: rgba(255,255,255,0.05); }
+    .athlete-row.hidden { opacity: 0.3; }
+    .athlete-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2); }
+    .athlete-label { flex: 1; }
+    .athlete-alt { font-size: 11px; color: #8888a0; font-variant-numeric: tabular-nums; min-width: 48px; text-align: right; }
+
+    /* ── LAYER TOGGLES ── */
+    #layer-toggles {
+      position: absolute; top: 70px; left: 12px; z-index: 10;
+      background: rgba(14,14,24,0.88); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; backdrop-filter: blur(20px); padding: 12px 14px;
+    }
+    #layer-toggles h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #6668; margin-bottom: 8px; }
+    .toggle-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; cursor: pointer; user-select: none; }
+    .toggle-row input { accent-color: #DB0A40; }
+    .thermal-icon { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, #FFD700, #FF4500); }
+    .wind-icon { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, #48B0C7, #0078FF); }
+
+    /* ── TIME CONTROLS ── */
+    #time-panel {
+      position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
+      background: linear-gradient(0deg, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.7) 80%, transparent 100%);
+      padding: 24px 20px 16px;
+    }
+    #time-display { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+    #time-day { font-size: 22px; font-weight: 700; }
+    #time-day .day-num { color: #DB0A40; }
+    #time-date { font-size: 14px; color: #aaa; }
+    #time-clock { font-size: 28px; font-weight: 300; letter-spacing: 2px; }
+    #slider-row { display: flex; align-items: center; gap: 12px; }
+    #time-slider {
+      flex: 1; height: 6px; -webkit-appearance: none; appearance: none;
+      background: rgba(255,255,255,0.12); border-radius: 3px; outline: none; cursor: pointer;
+    }
+    #time-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: #DB0A40; border: 2px solid #fff; cursor: grab; box-shadow: 0 0 10px rgba(219,10,64,0.5);
+    }
+    #time-slider::-moz-range-thumb {
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #DB0A40; border: 2px solid #fff; cursor: grab;
+    }
+    .btn {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
+      color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+      font-size: 13px; transition: background 0.15s; user-select: none;
+    }
+    .btn:hover { background: rgba(255,255,255,0.18); }
+    .btn.active { background: rgba(219,10,64,0.4); border-color: #DB0A40; }
+    .speed-btns { display: flex; gap: 4px; }
+
+    /* ── STATS BAR ── */
+    #stats-bar { display: flex; gap: 24px; margin-top: 8px; font-size: 11px; color: #8888a0; }
+    #stats-bar span b { color: #ccc; }
+
+    /* ── LOADING ── */
+    #loading {
+      position: absolute; inset: 0; z-index: 100;
+      background: #0a0a12; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px;
+      transition: opacity 0.6s;
+    }
+    #loading.done { opacity: 0; pointer-events: none; }
+    #loading h1 { font-size: 28px; font-weight: 700; }
+    #loading h1 span { color: #DB0A40; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #DB0A40; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #load-status { font-size: 13px; color: #666; }
+
+    /* ── THERMAL LEGEND ── */
+    #thermal-legend {
+      position: absolute; bottom: 120px; left: 12px; z-index: 10;
+      background: rgba(14,14,24,0.88); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px; backdrop-filter: blur(20px); padding: 10px 12px;
+      font-size: 11px; display: none;
+    }
+    #thermal-legend h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
+    .legend-bar { width: 120px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, #FFD700, #FF8C00, #FF4500, #DC143C); margin-bottom: 4px; }
+    .legend-labels { display: flex; justify-content: space-between; font-size: 10px; color: #888; }
+
+    .esri-ui-corner .esri-component { border-radius: 8px !important; }
+  </style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════╗ -->
+<!-- ║          LOGIN SCREEN                    ║ -->
+<!-- ╚══════════════════════════════════════════╝ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-brand">
+      <h1><span>RED BULL</span> X-ALPS</h1>
+      <p>3D Race Intelligence Platform</p>
+    </div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="login-user" autocomplete="username" autofocus>
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="login-pass" autocomplete="current-password">
+    </div>
+    <button class="login-btn" id="login-btn">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-footer">Authorized personnel only</div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════╗ -->
+<!-- ║          INTRO / WELCOME MODAL           ║ -->
+<!-- ╚══════════════════════════════════════════╝ -->
+<div id="intro-overlay">
+  <div class="intro-modal">
+    <div class="intro-header">
+      <h1><span>RED BULL</span> X-ALPS 2025</h1>
+      <p>3D Race Replay &amp; Thermal Analysis Dashboard</p>
+    </div>
+    <div class="intro-body">
+
+      <div class="intro-section">
+        <h2>Data Pipeline</h2>
+        <p>This visualization was built from raw GPS telemetry collected during the Red Bull X-Alps 2025 race (June 12-27). Here is how the data flows from devices to this dashboard:</p>
+        <div class="pipeline">
+          <div class="pipe-step pipe-src">Naviter GPS<br><small>Devices</small></div>
+          <span class="pipe-arrow">&rarr;</span>
+          <div class="pipe-step pipe-src">Google<br><small>Pub/Sub</small></div>
+          <span class="pipe-arrow">&rarr;</span>
+          <div class="pipe-step pipe-proc">BigQuery<br><small>Raw Storage</small></div>
+          <span class="pipe-arrow">&rarr;</span>
+          <div class="pipe-step pipe-proc">Python ETL<br><small>Parse &amp; Downsample</small></div>
+          <span class="pipe-arrow">&rarr;</span>
+          <div class="pipe-step pipe-out">JSON<br><small>25 MB</small></div>
+          <span class="pipe-arrow">&rarr;</span>
+          <div class="pipe-step pipe-viz">ArcGIS JS<br><small>SceneView 3D</small></div>
+        </div>
+        <ul>
+          <li><strong>Source:</strong> 37.5M GPS fixes from 35 athletes across 4 sensor types (Naviter, Flarm, OGN, Satellite)</li>
+          <li><strong>Processing:</strong> Parsed pipe/semicolon-delimited PubSub messages, deduplicated via 60-second time buckets with sensor priority ranking, extracted thermal climb events (>1.0 m/s) and wind observations</li>
+          <li><strong>Output:</strong> 439K track points, 80K thermal events, 62K wind observations covering 17 race days</li>
+        </ul>
+      </div>
+
+      <div class="intro-section">
+        <h2>Visualization Layers</h2>
+        <ul>
+          <li><strong>3D Track Lines</strong> &mdash; Each athlete's full route rendered as a glowing polyline at actual GPS altitude above the Alpine terrain. Dual-layer glow effect (wide translucent + narrow bright core)</li>
+          <li><strong>Animated Athlete Markers</strong> &mdash; Colored dots that move along each track in real-time, with smooth interpolation between data points. Shows current altitude in the sidebar</li>
+          <li><strong>Thermal Columns</strong> &mdash; 3D cylinders at locations where athletes detected rising air (vertical speed > 1 m/s). Height and width scale with climb rate. Color: gold (1 m/s) &rarr; orange &rarr; red &rarr; crimson (4+ m/s). Time-filtered to a &plusmn;1 hour window</li>
+          <li><strong>Wind Observations</strong> &mdash; Colored dots showing windspeed measured by Naviter instruments. Intensity maps to speed. Toggle via Layers panel</li>
+          <li><strong>Dynamic Lighting</strong> &mdash; Sun position updates automatically with the time slider, creating realistic day/night transitions across the Alps</li>
+        </ul>
+      </div>
+
+      <div class="intro-section">
+        <h2>Controls</h2>
+        <table class="controls-table">
+          <tr><td>Space</td><td>Play / Pause race animation</td></tr>
+          <tr><td>Arrow Left/Right</td><td>Jump backward / forward 1 hour</td></tr>
+          <tr><td>Time Slider</td><td>Drag to scrub through the entire race timeline</td></tr>
+          <tr><td>Speed Buttons</td><td>0.5h/s, 1h/s, 4h/s, or 12h/s playback speed</td></tr>
+          <tr><td>Click Athlete</td><td>Toggle athlete track visibility on/off</td></tr>
+          <tr><td>Double-click Athlete</td><td>Fly camera to athlete's current position</td></tr>
+          <tr><td>Layers Panel</td><td>Toggle Tracks, Thermals, Wind, and Athlete markers</td></tr>
+          <tr><td>Mouse / Touch</td><td>Orbit, pan, and zoom the 3D scene</td></tr>
+          <tr><td>? Button</td><td>Re-open this guide at any time</td></tr>
+        </table>
+      </div>
+
+      <div class="intro-section">
+        <h2>Technical Details</h2>
+        <ul>
+          <li><strong>Rendering:</strong> ArcGIS Maps SDK for JavaScript 4.30, SceneView with world elevation, absolute-height positioning</li>
+          <li><strong>Performance:</strong> Binary search for time-filtered layers, throttled updates, capped at 4000 thermal / 3000 wind graphics per frame</li>
+          <li><strong>Data Schema:</strong> 18 fields per GPS fix including lat, lon, altitude (GPS + barometric), groundspeed, vertical speed, windspeed, wind direction, activity mode (Flying/Hiking/Stationary), rest &amp; nightpass status, GPS quality (SNR 0-50)</li>
+        </ul>
+      </div>
+    </div>
+    <div class="intro-footer">
+      <button class="intro-start-btn" id="intro-start-btn">Start Exploring</button>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════╗ -->
+<!-- ║          MAIN APPLICATION                ║ -->
+<!-- ╚══════════════════════════════════════════╝ -->
+<div id="viewDiv"></div>
+
+<div id="header">
+  <h1><span>RED BULL</span> X-ALPS 2025</h1>
+  <span class="subtitle">3D Race Replay &amp; Thermal Analysis</span>
+</div>
+
+<button class="help-btn" id="help-btn" title="Show guide">?</button>
+
+<div id="layer-toggles">
+  <h2>Layers</h2>
+  <label class="toggle-row"><input type="checkbox" id="toggle-tracks" checked> Tracks</label>
+  <label class="toggle-row"><input type="checkbox" id="toggle-thermals" checked> <span class="thermal-icon"></span> Thermals</label>
+  <label class="toggle-row"><input type="checkbox" id="toggle-wind"> <span class="wind-icon"></span> Wind</label>
+  <label class="toggle-row"><input type="checkbox" id="toggle-markers" checked> Athletes</label>
+</div>
+
+<div id="sidebar"><h2>Athletes</h2><div id="athlete-list"></div></div>
+
+<div id="time-panel">
+  <div id="time-display">
+    <div><span id="time-day">Day <span class="day-num">1</span></span> <span id="time-date"></span></div>
+    <div id="time-clock">00:00</div>
+  </div>
+  <div id="slider-row">
+    <button class="btn" id="play-btn" title="Play/Pause">&#9654;</button>
+    <input type="range" id="time-slider" min="0" max="1000" value="0">
+    <div class="speed-btns">
+      <button class="btn speed-btn" data-speed="1800">0.5h/s</button>
+      <button class="btn speed-btn active" data-speed="3600">1h/s</button>
+      <button class="btn speed-btn" data-speed="14400">4h/s</button>
+      <button class="btn speed-btn" data-speed="43200">12h/s</button>
+    </div>
+  </div>
+  <div id="stats-bar">
+    <span>Thermals visible: <b id="stat-thermals">0</b></span>
+    <span>Wind obs: <b id="stat-wind">0</b></span>
+    <span>Athletes active: <b id="stat-active">0</b></span>
+  </div>
+</div>
+
+<div id="thermal-legend">
+  <h3>Thermal Strength (m/s)</h3>
+  <div class="legend-bar"></div>
+  <div class="legend-labels"><span>1.0</span><span>2.0</span><span>3.0</span><span>4.0+</span></div>
+</div>
+
+<div id="loading">
+  <h1><span>RED BULL</span> X-ALPS 2025</h1>
+  <div class="spinner"></div>
+  <div id="load-status">Loading race data...</div>
+</div>
+
+<script src="https://js.arcgis.com/4.30/"></script>
+<script>
+// ============================================================
+// LOGIN
+// ============================================================
+(function() {
+  const loginScreen = document.getElementById("login-screen");
+  const loginBtn = document.getElementById("login-btn");
+  const loginUser = document.getElementById("login-user");
+  const loginPass = document.getElementById("login-pass");
+  const loginError = document.getElementById("login-error");
+  const introOverlay = document.getElementById("intro-overlay");
+
+  function attemptLogin() {
+    const user = loginUser.value.trim();
+    const pass = loginPass.value;
+    if (user === "portaladmin" && pass === "portaladmin") {
+      loginScreen.style.transition = "opacity 0.5s";
+      loginScreen.style.opacity = "0";
+      setTimeout(() => {
+        loginScreen.style.display = "none";
+        introOverlay.classList.add("visible");
+      }, 500);
+    } else {
+      loginError.textContent = "Invalid credentials. Please try again.";
+      loginPass.value = "";
+      loginPass.focus();
+    }
+  }
+
+  loginBtn.addEventListener("click", attemptLogin);
+  loginPass.addEventListener("keydown", e => { if (e.key === "Enter") attemptLogin(); });
+  loginUser.addEventListener("keydown", e => { if (e.key === "Enter") loginPass.focus(); });
+})();
+
+// ============================================================
+// INTRO MODAL
+// ============================================================
+(function() {
+  const introOverlay = document.getElementById("intro-overlay");
+  const startBtn = document.getElementById("intro-start-btn");
+  const helpBtn = document.getElementById("help-btn");
+
+  startBtn.addEventListener("click", () => {
+    introOverlay.classList.remove("visible");
+    initApp();
+  });
+
+  helpBtn.addEventListener("click", () => {
+    introOverlay.classList.add("visible");
+  });
+
+  // Close on backdrop click
+  introOverlay.addEventListener("click", e => {
+    if (e.target === introOverlay) {
+      introOverlay.classList.remove("visible");
+    }
+  });
+})();
+
+// ============================================================
+// MAIN APPLICATION (deferred until after intro)
+// ============================================================
+let appInitialized = false;
+
+function initApp() {
+  if (appInitialized) return;
+  appInitialized = true;
+
+const ARCGIS_API_KEY = "";
+const DATA_URL = "data/race_data.json";
+const THERMAL_WINDOW = 3600;
+const WIND_WINDOW = 5400;
+const RACE_START_DATE = new Date("2025-06-12T00:00:00Z");
+
+require([
+  "esri/config",
+  "esri/Map",
+  "esri/views/SceneView",
+  "esri/layers/GraphicsLayer",
+  "esri/Graphic",
+  "esri/geometry/Polyline",
+  "esri/geometry/Point",
+  "esri/symbols/LineSymbol3D",
+  "esri/symbols/LineSymbol3DLayer",
+  "esri/symbols/PointSymbol3D",
+  "esri/symbols/ObjectSymbol3DLayer",
+  "esri/symbols/IconSymbol3DLayer"
+], function(esriConfig, Map, SceneView, GraphicsLayer, Graphic, Polyline, Point,
+            LineSymbol3D, LineSymbol3DLayer, PointSymbol3D, ObjectSymbol3DLayer, IconSymbol3DLayer) {
+
+  if (ARCGIS_API_KEY) esriConfig.apiKey = ARCGIS_API_KEY;
+
+  const trackLayer = new GraphicsLayer({ title: "Tracks", elevationInfo: { mode: "absolute-height" } });
+  const thermalLayer = new GraphicsLayer({ title: "Thermals", elevationInfo: { mode: "absolute-height" } });
+  const windLayer = new GraphicsLayer({ title: "Wind", elevationInfo: { mode: "absolute-height" }, visible: false });
+  const markerLayer = new GraphicsLayer({ title: "Athletes", elevationInfo: { mode: "absolute-height" } });
+
+  const map = new Map({
+    basemap: "satellite",
+    ground: "world-elevation",
+    layers: [trackLayer, thermalLayer, windLayer, markerLayer]
+  });
+
+  const view = new SceneView({
+    container: "viewDiv",
+    map: map,
+    qualityProfile: "high",
+    camera: {
+      position: { longitude: 10.2, latitude: 45.0, z: 180000 },
+      tilt: 55, heading: 25
+    },
+    environment: {
+      atmosphere: { quality: "high" },
+      lighting: {
+        type: "sun",
+        date: new Date("2025-06-15T10:00:00Z"),
+        directShadowsEnabled: true,
+        ambientOcclusionEnabled: true
+      },
+      starsEnabled: false
+    },
+    popup: { dockEnabled: true, dockOptions: { position: "top-right", breakpoint: false } },
+    ui: { components: ["zoom", "compass", "navigation-toggle"] }
+  });
+
+  let raceData = null;
+  let minTs = 0, maxTs = 0;
+  const markers = {};
+  const trackGraphics = {};
+  const athleteVisible = {};
+  let currentTime = 0;
+  let isPlaying = false;
+  let playSpeed = 3600;
+  let lastFrameMs = 0;
+  let thermalsSorted = [];
+  let windSorted = [];
+
+  const statusEl = document.getElementById("load-status");
+
+  fetch(DATA_URL)
+    .then(r => { statusEl.textContent = "Parsing JSON..."; return r.json(); })
+    .then(data => {
+      raceData = data;
+      minTs = data.meta.min_ts;
+      maxTs = data.meta.max_ts;
+      currentTime = minTs;
+      thermalsSorted = data.thermals;
+      windSorted = data.wind;
+
+      statusEl.textContent = "Building 3D tracks...";
+      requestAnimationFrame(() => {
+        buildTracks();
+        buildMarkers();
+        buildSidebar();
+        setupTimeControls();
+        updatePositions(currentTime);
+        updateThermals(currentTime);
+        document.getElementById("loading").classList.add("done");
+        document.getElementById("thermal-legend").style.display = "block";
+      });
+    })
+    .catch(err => { statusEl.textContent = "Error: " + err.message; console.error(err); });
+
+  function buildTracks() {
+    const aids = Object.keys(raceData.tracks).sort((a,b) => +a - +b);
+    for (const aid of aids) {
+      const t = raceData.tracks[aid];
+      const pts = t.points;
+      if (pts.length < 2) continue;
+      athleteVisible[aid] = true;
+      const [r, g, b] = t.color;
+      const path = pts.map(p => [p[0], p[1], p[2]]);
+      const graphic = new Graphic({
+        geometry: new Polyline({ paths: [path], spatialReference: { wkid: 4326 }, hasZ: true }),
+        symbol: new LineSymbol3D({
+          symbolLayers: [
+            new LineSymbol3DLayer({ material: { color: [r, g, b, 0.15] }, size: 5 }),
+            new LineSymbol3DLayer({ material: { color: [r, g, b, 0.7] }, size: 1.5 })
+          ]
+        }),
+        attributes: { aid: aid }
+      });
+      trackLayer.add(graphic);
+      trackGraphics[aid] = graphic;
+    }
+  }
+
+  function buildMarkers() {
+    const aids = Object.keys(raceData.tracks).sort((a,b) => +a - +b);
+    for (const aid of aids) {
+      const t = raceData.tracks[aid];
+      if (t.points.length < 2) continue;
+      const [r, g, b] = t.color;
+      const p = t.points[0];
+      const graphic = new Graphic({
+        geometry: new Point({ longitude: p[0], latitude: p[1], z: p[2], spatialReference: { wkid: 4326 } }),
+        symbol: new PointSymbol3D({
+          symbolLayers: [
+            new IconSymbol3DLayer({
+              resource: { primitive: "circle" },
+              material: { color: [r, g, b] },
+              outline: { color: [255, 255, 255, 0.9], size: 2 },
+              size: 14
+            })
+          ],
+          verticalOffset: { screenLength: 20, maxWorldLength: 5000, minWorldLength: 50 },
+          callout: { type: "line", size: 1, color: [255, 255, 255, 0.4] }
+        }),
+        attributes: { aid: aid, name: "Athlete #" + aid },
+        popupTemplate: {
+          title: "Athlete #{aid}",
+          content: [{ type: "fields", fieldInfos: [
+            { fieldName: "alt", label: "Altitude (m)" },
+            { fieldName: "activity", label: "Activity" },
+            { fieldName: "time", label: "Time (UTC)" }
+          ]}]
+        },
+        visible: false
+      });
+      markerLayer.add(graphic);
+      markers[aid] = graphic;
+    }
+  }
+
+  const ACT_NAMES = { 0: "Stationary", 1: "Flying", 2: "Hiking", "-1": "Unknown" };
+
+  function updatePositions(t) {
+    let activeCount = 0;
+    for (const aid of Object.keys(markers)) {
+      const pts = raceData.tracks[aid].points;
+      const first = pts[0][3], last = pts[pts.length - 1][3];
+      if (!athleteVisible[aid] || t < first || t > last) {
+        markers[aid].visible = false; continue;
+      }
+      let lo = 0, hi = pts.length - 1;
+      while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pts[mid][3] <= t) lo = mid; else hi = mid - 1; }
+      const p1 = pts[lo], p2 = (lo + 1 < pts.length) ? pts[lo + 1] : p1;
+      const dt = p2[3] - p1[3];
+      const frac = dt > 0 ? Math.min(1, (t - p1[3]) / dt) : 0;
+      const lon = p1[0] + (p2[0] - p1[0]) * frac;
+      const lat = p1[1] + (p2[1] - p1[1]) * frac;
+      const alt = p1[2] + (p2[2] - p1[2]) * frac;
+      markers[aid].geometry = new Point({ longitude: lon, latitude: lat, z: alt, spatialReference: { wkid: 4326 } });
+      markers[aid].attributes = {
+        aid, name: "Athlete #" + aid, alt: Math.round(alt),
+        activity: ACT_NAMES[p1[4]] || "Unknown",
+        time: new Date(t * 1000).toISOString().slice(11, 19)
+      };
+      markers[aid].visible = true;
+      activeCount++;
+      const altEl = document.getElementById("alt-" + aid);
+      if (altEl) altEl.textContent = Math.round(alt) + "m";
+    }
+    document.getElementById("stat-active").textContent = activeCount;
+  }
+
+  let lastThermalUpdate = 0;
+  function thermalColor(vs) {
+    if (vs < 1.5) return [255, 215, 0, 0.7];
+    if (vs < 2.5) return [255, 140, 0, 0.75];
+    if (vs < 3.5) return [255, 69, 0, 0.8];
+    return [220, 20, 60, 0.85];
+  }
+
+  function updateThermals(t) {
+    if (Math.abs(t - lastThermalUpdate) < THERMAL_WINDOW * 0.1) return;
+    lastThermalUpdate = t;
+    thermalLayer.removeAll();
+    const startT = t - THERMAL_WINDOW, endT = t + THERMAL_WINDOW;
+    let lo = 0, hi = thermalsSorted.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (thermalsSorted[mid][4] < startT) lo = mid + 1; else hi = mid; }
+    let count = 0;
+    const graphics = [];
+    for (let i = lo; i < thermalsSorted.length && thermalsSorted[i][4] <= endT; i++) {
+      const th = thermalsSorted[i];
+      const vs = th[3], col = thermalColor(vs);
+      const height = Math.max(100, vs * 200), width = Math.max(80, vs * 60);
+      graphics.push(new Graphic({
+        geometry: new Point({ longitude: th[0], latitude: th[1], z: th[2], spatialReference: { wkid: 4326 } }),
+        symbol: new PointSymbol3D({ symbolLayers: [
+          new ObjectSymbol3DLayer({ resource: { primitive: "cylinder" }, material: { color: col }, width, height, depth: width })
+        ]})
+      }));
+      count++;
+      if (count > 4000) break;
+    }
+    thermalLayer.addMany(graphics);
+    document.getElementById("stat-thermals").textContent = count;
+  }
+
+  let lastWindUpdate = 0;
+  function updateWind(t) {
+    if (Math.abs(t - lastWindUpdate) < WIND_WINDOW * 0.15) return;
+    lastWindUpdate = t;
+    windLayer.removeAll();
+    if (!windLayer.visible) return;
+    const startT = t - WIND_WINDOW, endT = t + WIND_WINDOW;
+    let lo = 0, hi = windSorted.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (windSorted[mid][5] < startT) lo = mid + 1; else hi = mid; }
+    let count = 0;
+    const graphics = [];
+    for (let i = lo; i < windSorted.length && windSorted[i][5] <= endT; i++) {
+      const w = windSorted[i];
+      const ws = w[3], intensity = Math.min(1, ws / 40);
+      const r = Math.round(72 + intensity * 120), g = Math.round(176 - intensity * 80), b = Math.round(199 + intensity * 56);
+      graphics.push(new Graphic({
+        geometry: new Point({ longitude: w[0], latitude: w[1], z: w[2], spatialReference: { wkid: 4326 } }),
+        symbol: new PointSymbol3D({ symbolLayers: [
+          new IconSymbol3DLayer({ resource: { primitive: "circle" }, material: { color: [r, g, b, 0.6] }, outline: { color: [r, g, b, 0.9], size: 1 }, size: 6 + ws * 0.3 })
+        ]}),
+        popupTemplate: { title: "Wind Observation", content: `Speed: ${ws} km/h | Direction: ${w[4]} deg | Alt: ${w[2]}m` }
+      }));
+      count++;
+      if (count > 3000) break;
+    }
+    windLayer.addMany(graphics);
+    document.getElementById("stat-wind").textContent = count;
+  }
+
+  function setupTimeControls() {
+    const slider = document.getElementById("time-slider");
+    const playBtn = document.getElementById("play-btn");
+    slider.min = minTs; slider.max = maxTs; slider.value = minTs; slider.step = 60;
+
+    slider.addEventListener("input", () => {
+      currentTime = +slider.value;
+      updateAll();
+    });
+
+    playBtn.addEventListener("click", () => {
+      isPlaying = !isPlaying;
+      playBtn.innerHTML = isPlaying ? "&#9646;&#9646;" : "&#9654;";
+      playBtn.classList.toggle("active", isPlaying);
+      if (isPlaying) lastFrameMs = performance.now();
+    });
+
+    document.querySelectorAll(".speed-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".speed-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        playSpeed = +btn.dataset.speed;
+      });
+    });
+
+    function tick(now) {
+      if (isPlaying) {
+        const dtReal = (now - lastFrameMs) / 1000;
+        if (dtReal > 0 && dtReal < 1) {
+          currentTime += dtReal * playSpeed;
+          if (currentTime > maxTs) currentTime = minTs;
+          slider.value = currentTime;
+          updateAll();
+        }
+      }
+      lastFrameMs = now;
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+    updateTimeDisplay(currentTime);
+
+    document.addEventListener("keydown", e => {
+      if (e.target.tagName === "INPUT" && e.target.type !== "range") return;
+      if (e.code === "Space") { e.preventDefault(); playBtn.click(); }
+      if (e.code === "ArrowRight") { currentTime = Math.min(maxTs, currentTime + 3600); slider.value = currentTime; updateAll(); }
+      if (e.code === "ArrowLeft") { currentTime = Math.max(minTs, currentTime - 3600); slider.value = currentTime; updateAll(); }
+    });
+
+    function updateAll() {
+      updateTimeDisplay(currentTime);
+      updatePositions(currentTime);
+      updateThermals(currentTime);
+      updateWind(currentTime);
+    }
+  }
+
+  function updateTimeDisplay(t) {
+    const d = new Date(t * 1000);
+    const dayNum = Math.floor((t - RACE_START_DATE.getTime() / 1000) / 86400) + 1;
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    document.getElementById("time-day").innerHTML = `Day <span class="day-num">${Math.max(1, dayNum)}</span>`;
+    document.getElementById("time-date").textContent = `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+    document.getElementById("time-clock").textContent = String(d.getUTCHours()).padStart(2, "0") + ":" + String(d.getUTCMinutes()).padStart(2, "0");
+    view.environment.lighting.date = d;
+  }
+
+  function buildSidebar() {
+    const list = document.getElementById("athlete-list");
+    for (const aid of Object.keys(raceData.tracks).sort((a,b) => +a - +b)) {
+      const t = raceData.tracks[aid];
+      if (t.points.length < 2) continue;
+      const [r, g, b] = t.color;
+      const row = document.createElement("div");
+      row.className = "athlete-row";
+      row.innerHTML = `<div class="athlete-dot" style="background:rgb(${r},${g},${b})"></div><span class="athlete-label">Athlete #${aid}</span><span class="athlete-alt" id="alt-${aid}">--</span>`;
+      row.addEventListener("click", () => {
+        athleteVisible[aid] = !athleteVisible[aid];
+        row.classList.toggle("hidden", !athleteVisible[aid]);
+        trackGraphics[aid].visible = athleteVisible[aid];
+        if (!athleteVisible[aid]) markers[aid].visible = false;
+      });
+      row.addEventListener("dblclick", e => {
+        e.preventDefault();
+        const mk = markers[aid];
+        if (mk && mk.visible && mk.geometry) view.goTo({ target: mk.geometry, zoom: 14, tilt: 70 }, { duration: 1500 });
+      });
+      list.appendChild(row);
+    }
+  }
+
+  document.getElementById("toggle-tracks").addEventListener("change", e => { trackLayer.visible = e.target.checked; });
+  document.getElementById("toggle-thermals").addEventListener("change", e => {
+    thermalLayer.visible = e.target.checked;
+    document.getElementById("thermal-legend").style.display = e.target.checked ? "block" : "none";
+  });
+  document.getElementById("toggle-wind").addEventListener("change", e => {
+    windLayer.visible = e.target.checked;
+    if (e.target.checked) updateWind(currentTime);
+  });
+  document.getElementById("toggle-markers").addEventListener("change", e => { markerLayer.visible = e.target.checked; });
+
+}); // end require
+} // end initApp
+</script>
+</body>
+</html>
