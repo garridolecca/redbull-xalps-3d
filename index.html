@@ -633,21 +633,31 @@ require([
   // ================================================================
   // BUILD MARKERS
   // ================================================================
+  function makeMarkerSvg(num, r, g, b) {
+    return "data:image/svg+xml," + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30">` +
+      `<circle cx="15" cy="15" r="14" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2"/>` +
+      `<text x="15" y="20" text-anchor="middle" fill="white" font-size="${num > 9 ? 11 : 13}" font-weight="bold" font-family="Arial,sans-serif">${num}</text>` +
+      `</svg>`
+    );
+  }
+
   function buildMarkers() {
     for (const aid of Object.keys(raceData.tracks).sort((a,b)=>+a-+b)) {
       const t = raceData.tracks[aid];
       if (t.points.length < 2) continue;
       const [r,g,b] = t.color, p = t.points[0];
+      const ath = ATHLETES[aid] || { name:"Athlete #"+aid };
       const gfx = new Graphic({
         geometry: new Point({longitude:p[0],latitude:p[1],z:p[2],spatialReference:{wkid:4326}}),
         symbol: new PointSymbol3D({ symbolLayers:[
-          new IconSymbol3DLayer({resource:{primitive:"circle"},material:{color:[r,g,b]},outline:{color:[255,255,255,0.9],size:2},size:14})
+          new IconSymbol3DLayer({resource:{href:makeMarkerSvg(aid,r,g,b)},size:22})
         ],
-          verticalOffset:{screenLength:20,maxWorldLength:5000,minWorldLength:50},
-          callout:{type:"line",size:1,color:[255,255,255,0.4]}
+          verticalOffset:{screenLength:30,maxWorldLength:8000,minWorldLength:50},
+          callout:{type:"line",size:1.5,color:[255,255,255,0.5]}
         }),
-        attributes:{aid,name:"Athlete #"+aid},
-        popupTemplate:{title:"Athlete #{aid}",content:[{type:"fields",fieldInfos:[
+        attributes:{aid,name:ath.name},
+        popupTemplate:{title:ath.name,content:[{type:"fields",fieldInfos:[
           {fieldName:"alt",label:"Altitude (m)"},{fieldName:"activity",label:"Activity"},{fieldName:"time",label:"Time (UTC)"}
         ]}]},
         visible:false
@@ -1019,7 +1029,7 @@ require([
     updateTimeDisplay(currentTime);
   }
 
-  function updateAll() { updateTimeDisplay(currentTime); updatePositions(currentTime); updateThermals(currentTime); updateWind(currentTime); }
+  function updateAll() { updateTimeDisplay(currentTime); updatePositions(currentTime); updateThermals(currentTime); }
 
   function updateTimeDisplay(t) {
     const d=new Date(t*1000);
