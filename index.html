@@ -163,32 +163,49 @@
     .login-brand p { font-size: 11px; color: var(--calcite-color-text-3); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
     .login-error { color: #ff4466; font-size: 12px; text-align: center; min-height: 18px; margin-top: 8px; }
 
-    /* ── INTRO MODAL ── */
-    .intro-body { padding: 0 4px; }
-    .intro-section { margin-bottom: 20px; }
-    .intro-section h3 {
-      font-size: 13px; font-weight: 700; color: #DB0A40; margin-bottom: 8px;
-      display: flex; align-items: center; gap: 6px;
+    /* ── GUIDE PAGE ── */
+    #guide-page {
+      position: fixed; inset: 0; z-index: 200; background: var(--calcite-color-foreground-1);
+      display: none; flex-direction: column; overflow: hidden;
     }
-    .intro-section h3::before { content: ''; width: 3px; height: 14px; background: #DB0A40; border-radius: 2px; }
-    .intro-section p, .intro-section li { font-size: 12px; line-height: 1.7; color: var(--calcite-color-text-2); }
-    .intro-section ul { padding-left: 16px; }
+    #guide-page.open { display: flex; }
+    .guide-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-bottom: 1px solid var(--calcite-color-border-3);
+      flex-shrink: 0;
+    }
+    .guide-header h1 { font-size: 18px; font-weight: 700; margin: 0; }
+    .guide-header h1 span { color: #DB0A40; }
+    .guide-content { flex: 1; overflow-y: auto; padding: 20px 24px; max-width: 900px; margin: 0 auto; width: 100%; }
+    .guide-section { margin-bottom: 28px; }
+    .guide-section h2 {
+      font-size: 16px; font-weight: 700; color: #DB0A40; margin: 0 0 12px 0;
+      padding-bottom: 6px; border-bottom: 2px solid rgba(219,10,64,0.3);
+    }
+    .guide-section p, .guide-section li { font-size: 13px; line-height: 1.8; color: var(--calcite-color-text-2); }
+    .guide-section ul { padding-left: 18px; margin: 8px 0; }
+    .guide-section li { margin-bottom: 4px; }
+    .guide-section code { background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 3px; font-size: 12px; }
     .pipeline {
       display: flex; align-items: center; justify-content: center; gap: 0;
       margin: 12px 0; flex-wrap: wrap;
     }
     .pipe-step {
-      padding: 6px 10px; font-size: 10px; font-weight: 600; text-transform: uppercase;
+      padding: 8px 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;
       border-radius: 6px; text-align: center; white-space: nowrap;
     }
-    .pipe-arrow { font-size: 14px; color: #444; padding: 0 4px; }
+    .pipe-arrow { font-size: 16px; color: #444; padding: 0 6px; }
     .pipe-src { background: rgba(219,10,64,0.12); border: 1px solid rgba(219,10,64,0.25); color: #f06; }
     .pipe-proc { background: rgba(255,165,0,0.1); border: 1px solid rgba(255,165,0,0.2); color: #ffa500; }
     .pipe-out { background: rgba(52,199,89,0.1); border: 1px solid rgba(52,199,89,0.2); color: #34c759; }
     .pipe-viz { background: rgba(50,173,230,0.1); border: 1px solid rgba(50,173,230,0.2); color: #32ade6; }
-    .ctrl-table { width: 100%; border-collapse: collapse; }
-    .ctrl-table td { padding: 4px 8px; font-size: 11px; border-bottom: 1px solid var(--calcite-color-border-3); }
-    .ctrl-table td:first-child { font-weight: 600; font-family: monospace; width: 130px; color: var(--calcite-color-text-1); }
+    .ctrl-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+    .ctrl-table td { padding: 6px 10px; font-size: 13px; border-bottom: 1px solid var(--calcite-color-border-3); }
+    .ctrl-table td:first-child { font-weight: 600; font-family: monospace; width: 140px; color: var(--calcite-color-text-1); }
+    .method-card {
+      background: var(--calcite-color-foreground-2); border-radius: 8px;
+      padding: 14px 16px; margin: 10px 0; border-left: 3px solid;
+    }
 
     /* ── LOADING OVERLAY ── */
     #loading-overlay {
@@ -226,74 +243,21 @@
     </div>
   </calcite-dialog>
 
-  <!-- ═══════════ INTRO MODAL ═══════════ -->
-  <calcite-dialog id="intro-modal" modal width-scale="m" slot="dialogs">
-    <div slot="header">Welcome to Red Bull X-Alps 2025</div>
+  <!-- ═══════════ INTRO DIALOG (short welcome) ═══════════ -->
+  <calcite-dialog id="intro-modal" modal width-scale="s" slot="dialogs">
+    <div slot="header">Welcome</div>
     <div slot="content">
-      <div class="intro-body">
-        <div class="intro-section">
-          <h3>About the Race</h3>
-          <p>The <b>Red Bull X-Alps</b> is an adventure race across the European Alps where athletes must travel from Salzburg, Austria to Monaco by <b>paragliding or hiking</b> &mdash; no motorized transport allowed. Athletes carry their own paraglider (~30 kg) and choose when to fly vs. hike based on weather conditions. First to reach the finish line wins.</p>
-        </div>
-        <div class="intro-section">
-          <h3>Data Pipeline</h3>
-          <p>This dashboard visualizes raw GPS telemetry from 35 athletes over 17 race days (June 12&ndash;27, 2025).</p>
-          <div class="pipeline">
-            <div class="pipe-step pipe-src">Naviter GPS</div><span class="pipe-arrow">&rarr;</span>
-            <div class="pipe-step pipe-src">Pub/Sub</div><span class="pipe-arrow">&rarr;</span>
-            <div class="pipe-step pipe-proc">BigQuery</div><span class="pipe-arrow">&rarr;</span>
-            <div class="pipe-step pipe-proc">Python ETL</div><span class="pipe-arrow">&rarr;</span>
-            <div class="pipe-step pipe-out">JSON 17MB</div><span class="pipe-arrow">&rarr;</span>
-            <div class="pipe-step pipe-viz">ArcGIS 3D</div>
-          </div>
-          <p>Each athlete carries a <b>Naviter Omni</b> GPS instrument that records 18 fields per fix: lat, lon, GPS altitude, barometric altitude, altitude above ground, speed, groundspeed, heading, vertical speed, windspeed, wind direction, activity mode, airspace, rest status, nightpass status, GPS quality, and additional metadata.</p>
-          <p><b>Processing:</b> 37.5M raw GPS fixes were deduplicated into 90-second time buckets with sensor priority (Naviter &gt; Satellite &gt; Flarm &gt; OGN). Coordinates rounded to 4 decimal places (~11m accuracy). Output: 294K track points, 59K climb events, 62K wind observations.</p>
-        </div>
-        <div class="intro-section">
-          <h3>Analysis Methodology &amp; Assumptions</h3>
-          <p>The analysis panel derives insights from raw sensor fields. <b>These are interpretations, not direct measurements:</b></p>
-          <ul>
-            <li><b>Climb Events (labeled "Thermals"):</b> Any GPS fix where the raw <b>Vertical Speed</b> field exceeds <b>1.0 m/s</b>, from Naviter sensors only. This is a simple filter &mdash; no clustering, no spatial analysis, no weather correlation. Positive vertical speed likely indicates thermal lift (rising warm air), but could also be ridge lift, wave lift, or sensor noise. The <code>UserActivity</code> field was <b>not</b> checked, so some points may be from hiking uphill, not flying.</li>
-            <li><b>Wind Rose:</b> Built from the raw <b>Windspeed</b> (km/h) and <b>Wind Direction</b> (degrees) fields recorded by the Naviter Omni instrument. These are onboard measurements, not weather station data. Sampled every 5 minutes per athlete. The chart shows all observations within &plusmn;1.5 hours of the current time.</li>
-            <li><b>Thermal Stats (Active / Avg / Max):</b> Count, mean, and maximum of Vertical Speed values exceeding 1.0 m/s within &plusmn;1 hour of the current time. "Active" is the number of qualifying GPS fixes, not the number of distinct thermal events.</li>
-            <li><b>Altitude Profile:</b> Plots the raw <b>GPS Altitude</b> (ellipsoid height in meters) over the athlete's full track timeline. The red line marks the current playback time.</li>
-            <li><b>Activity Mode:</b> Directly from the <code>UserActivity</code> field: <b>F</b> = Flying, <b>H</b> = Hiking, <b>S</b> = Stationary. Only available from Naviter Omni devices.</li>
-          </ul>
-        </div>
-        <div class="intro-section">
-          <h3>What You See on the Map</h3>
-          <ul>
-            <li><b>Glowing colored lines</b> = each athlete's GPS track rendered at actual altitude above the terrain</li>
-            <li><b>Numbered circles</b> = athlete current positions, animated along their tracks. The number is their bib/race number</li>
-          </ul>
-        </div>
-        <div class="intro-section">
-          <h3>Controls</h3>
-          <table class="ctrl-table">
-            <tr><td>Play / Pause</td><td>Start or stop the race animation</td></tr>
-            <tr><td>Time Slider</td><td>Drag to scrub through the 17-day race</td></tr>
-            <tr><td>Speed (0.5x&ndash;12x)</td><td>How fast time advances (1x = 1 hour per second)</td></tr>
-            <tr><td>Space bar</td><td>Toggle play / pause</td></tr>
-            <tr><td>&larr; / &rarr; keys</td><td>Jump backward / forward 1 hour</td></tr>
-            <tr><td>SOLO (pin icon)</td><td>Filter all data to one athlete only</td></tr>
-            <tr><td>Double-click name</td><td>Fly the 3D camera to that athlete</td></tr>
-            <tr><td>? button</td><td>Reopen this guide</td></tr>
-          </table>
-        </div>
-        <div class="intro-section">
-          <h3>Data Source &amp; Limitations</h3>
-          <ul>
-            <li>Raw data exported from Google BigQuery (Pub/Sub subscription: <code>naviter_to_bigquery</code>)</li>
-            <li>Sensor data quality varies: GPS Quality field ranges 0&ndash;50 (signal-to-noise ratio). Some fixes in valleys may be inaccurate</li>
-            <li>Wind and activity fields are only populated from <b>Naviter (N)</b> sensor type, not from Satellite, Flarm, or OGN</li>
-            <li>Athlete names are approximate &mdash; bib-to-name mapping may contain inaccuracies</li>
-            <li>The 1.0 m/s climb threshold is an arbitrary cutoff, not a standard paragliding definition</li>
-          </ul>
-        </div>
+      <div style="text-align:center;padding:8px 0 16px">
+        <h2 style="font-size:20px;font-weight:800;margin:0"><span style="color:#DB0A40">RED BULL</span> X-ALPS 2025</h2>
+        <p style="font-size:12px;color:var(--calcite-color-text-3);margin-top:6px">3D Race Replay &amp; Analysis Dashboard</p>
       </div>
-      <div style="text-align:center;padding:16px 0 4px">
-        <calcite-button id="intro-start-btn" kind="brand" width="full" scale="l" icon-end="arrow-right">Start Exploring</calcite-button>
-      </div>
+      <p style="font-size:13px;line-height:1.7;color:var(--calcite-color-text-2);margin-bottom:12px">
+        Explore GPS telemetry from <b>35 athletes</b> racing across the Alps by paraglider and on foot over <b>17 days</b>. Use the play button to animate the race, open the Athletes panel to solo-filter, and check the Analysis panel for live wind and climb data.
+      </p>
+      <p style="font-size:12px;color:var(--calcite-color-text-3);margin-bottom:16px">
+        Click the <b>?</b> button anytime for the full documentation, data methodology, and controls reference.
+      </p>
+      <calcite-button id="intro-start-btn" kind="brand" width="full" scale="l" icon-end="arrow-right">Start Exploring</calcite-button>
     </div>
   </calcite-dialog>
 
@@ -406,6 +370,105 @@
 
 </calcite-shell>
 
+<!-- ═══════════ FULL-SCREEN GUIDE PAGE ═══════════ -->
+<div id="guide-page">
+  <div class="guide-header">
+    <h1><span>RED BULL</span> X-ALPS 2025 &mdash; Documentation</h1>
+    <calcite-button id="guide-close-btn" kind="neutral" appearance="outline" icon-start="x" scale="s">Close</calcite-button>
+  </div>
+  <div class="guide-content">
+
+    <div class="guide-section">
+      <h2>About the Race</h2>
+      <p>The <b>Red Bull X-Alps</b> is one of the world's toughest adventure races. Athletes must travel from <b>Salzburg, Austria to Monaco</b> (~1,200 km) using only two modes of transport: <b>paragliding</b> (flying) or <b>hiking on foot</b>. No motorized transport is allowed. Athletes carry their own paraglider weighing ~30 kg and must pass through mandatory turnpoints along the Alpine route. <b>First to reach the finish line wins.</b></p>
+      <p>The race spans approximately 12-14 days with mandatory rest periods enforced at night. Some athletes earn "night passes" allowing overnight movement. The 2025 edition featured 35 athletes from 20+ countries.</p>
+    </div>
+
+    <div class="guide-section">
+      <h2>Data Pipeline</h2>
+      <p>This dashboard visualizes raw GPS telemetry from 35 athletes over 17 race days (June 12-27, 2025).</p>
+      <div class="pipeline">
+        <div class="pipe-step pipe-src">Naviter GPS</div><span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-step pipe-src">Pub/Sub</div><span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-step pipe-proc">BigQuery</div><span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-step pipe-proc">Python ETL</div><span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-step pipe-out">JSON 17MB</div><span class="pipe-arrow">&rarr;</span>
+        <div class="pipe-step pipe-viz">ArcGIS 3D</div>
+      </div>
+      <p>Each athlete carries a <b>Naviter Omni</b> GPS instrument that records <b>18 fields per fix</b> including: latitude, longitude, GPS altitude, barometric altitude, altitude above ground, speed, groundspeed, heading, vertical speed, windspeed, wind direction, activity mode (Flying/Hiking/Stationary), airspace, rest status, nightpass status, and GPS quality.</p>
+      <p><b>Processing:</b> 37.5M raw GPS fixes were deduplicated into 90-second time buckets with sensor priority ranking (Naviter &gt; Satellite &gt; Flarm &gt; OGN). Coordinates rounded to 4 decimal places (~11m accuracy). Final output: 294K track points, 59K climb events, 62K wind observations.</p>
+    </div>
+
+    <div class="guide-section">
+      <h2>Analysis Methodology &amp; Assumptions</h2>
+      <p>The analysis panel derives insights from raw sensor fields. <b>These are interpretations, not direct measurements.</b></p>
+
+      <div class="method-card" style="border-color:#FFD700">
+        <h3 style="color:#FFD700;margin:0 0 6px;font-size:14px">Climb Events (labeled "Thermals")</h3>
+        <p>Any GPS fix where the raw <b>Vertical Speed</b> field exceeds <b>1.0 m/s</b>, from Naviter sensors only. This is a simple threshold filter &mdash; no clustering of consecutive points into distinct events, no spatial analysis, no weather correlation.</p>
+        <p>Positive vertical speed likely indicates thermal lift (rising warm air used by paragliders to gain altitude), but could also be ridge lift, wave lift, or sensor noise. The <code>UserActivity</code> field was <b>not</b> checked, so some points may be from hiking uphill, not flying. The 1.0 m/s threshold is an arbitrary cutoff.</p>
+        <ul>
+          <li><b>Active</b> = count of qualifying GPS fixes within &plusmn;1 hour of current time (not distinct thermal events)</li>
+          <li><b>Avg m/s</b> = mean vertical speed of those fixes</li>
+          <li><b>Max m/s</b> = highest single vertical speed value in the window</li>
+        </ul>
+      </div>
+
+      <div class="method-card" style="border-color:#48B0C7">
+        <h3 style="color:#48B0C7;margin:0 0 6px;font-size:14px">Wind Rose</h3>
+        <p>Built from the raw <b>Windspeed</b> (km/h) and <b>Wind Direction</b> (degrees) fields recorded by the Naviter Omni instrument. These are <b>onboard measurements from the athlete's device</b>, not weather station data.</p>
+        <p>Sampled every 5 minutes per athlete. The chart shows all observations within &plusmn;1.5 hours of the current playback time, binned into 16 compass directions and 4 speed ranges (0-5, 5-15, 15-25, 25+ km/h).</p>
+        <ul>
+          <li><b>Avg km/h</b> = mean windspeed of visible observations</li>
+          <li><b>Max km/h</b> = highest single windspeed in the window</li>
+          <li><b>Dominant</b> = compass direction with the most observations</li>
+        </ul>
+      </div>
+
+      <div class="method-card" style="border-color:#34C759">
+        <h3 style="color:#34C759;margin:0 0 6px;font-size:14px">Altitude Profile</h3>
+        <p>Plots the raw <b>GPS Altitude</b> (ellipsoid height in meters) over the athlete's full track timeline. Only shown in solo mode. The red vertical line marks the current playback position. This is a direct plot of the sensor data with no smoothing or correction.</p>
+      </div>
+    </div>
+
+    <div class="guide-section">
+      <h2>Map Layers</h2>
+      <ul>
+        <li><b>Glowing colored lines</b> &mdash; Each athlete's GPS track rendered at actual altitude above the 3D terrain. Dual-layer glow effect (translucent outer + bright inner core).</li>
+        <li><b>Numbered circles</b> &mdash; Athlete current positions animated along their tracks. The number inside is their bib/race number. Colors match the track lines.</li>
+      </ul>
+    </div>
+
+    <div class="guide-section">
+      <h2>Controls Reference</h2>
+      <table class="ctrl-table">
+        <tr><td>Play / Pause</td><td>Start or stop the race animation (also: Space bar)</td></tr>
+        <tr><td>Time Slider</td><td>Drag to scrub through the 17-day race timeline</td></tr>
+        <tr><td>Speed buttons</td><td>0.5x to 12x &mdash; how fast time advances (1x = 1 simulated hour per real second)</td></tr>
+        <tr><td>&larr; / &rarr; keys</td><td>Jump backward / forward 1 hour</td></tr>
+        <tr><td>SOLO (pin icon)</td><td>In the Athletes panel, click the pin to filter all data to one athlete</td></tr>
+        <tr><td>Show All</td><td>Exit solo mode, restore all athletes</td></tr>
+        <tr><td>Double-click name</td><td>Fly the 3D camera to that athlete's current position</td></tr>
+        <tr><td>Chart / People icons</td><td>Toggle the Analysis and Athletes side panels</td></tr>
+        <tr><td>? button</td><td>Open this documentation page</td></tr>
+      </table>
+    </div>
+
+    <div class="guide-section">
+      <h2>Data Source &amp; Limitations</h2>
+      <ul>
+        <li>Raw data exported from Google BigQuery (Pub/Sub subscription: <code>naviter_to_bigquery</code>)</li>
+        <li>Sensor data quality varies: GPS Quality field ranges 0-50 (signal-to-noise ratio). Fixes in deep valleys may be inaccurate.</li>
+        <li>Wind and activity fields are only populated from <b>Naviter (N)</b> sensor type, not Satellite, Flarm, or OGN.</li>
+        <li>Athlete names are approximate &mdash; bib-to-name mapping may contain inaccuracies.</li>
+        <li>The 1.0 m/s climb threshold is an arbitrary cutoff, not a paragliding standard.</li>
+        <li>Race data is property of Red Bull Media House / Red Bull X-Alps.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
 <!-- ═══════════ LOADING OVERLAY ═══════════ -->
 <div id="loading-overlay">
   <h1><span>RED BULL</span> X-ALPS 2025</h1>
@@ -503,7 +566,10 @@ loginUser.addEventListener("keydown", e => { if (e.key === "Enter") loginPass.se
 // ================================================================
 let appInit = false;
 document.getElementById("intro-start-btn").addEventListener("click", () => { introModal.open = false; initApp(); });
-document.getElementById("btn-help").addEventListener("click", () => { introModal.open = true; });
+
+const guidePage = document.getElementById("guide-page");
+document.getElementById("btn-help").addEventListener("click", () => { guidePage.classList.add("open"); });
+document.getElementById("guide-close-btn").addEventListener("click", () => { guidePage.classList.remove("open"); });
 
 const panelStart = document.getElementById("panel-start");
 const panelEnd = document.getElementById("panel-end");
