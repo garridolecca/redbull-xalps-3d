@@ -772,7 +772,7 @@ require([
       const gfx = new Graphic({
         geometry: new Point({longitude:p[0],latitude:p[1],z:p[2],spatialReference:{wkid:4326}}),
         symbol: new PointSymbol3D({ symbolLayers:[
-          new IconSymbol3DLayer({resource:{href:makeMarkerSvg(aid,r,g,b)},size:22})
+          new IconSymbol3DLayer({resource:{href:makeMarkerSvg(aid,r,g,b,0)},size:26})
         ],
           verticalOffset:{screenLength:30,maxWorldLength:8000,minWorldLength:50},
           callout:{type:"line",size:1.5,color:[255,255,255,0.5]}
