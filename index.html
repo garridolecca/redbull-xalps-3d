@@ -153,11 +153,12 @@
 
     /* ── LOADING OVERLAY ── */
     #loading-overlay {
-      position: fixed; inset: 0; z-index: 9000;
-      background: #1a1a2e; display: flex; flex-direction: column;
+      position: fixed; inset: 0; z-index: 900;
+      background: #1a1a2e; display: none; flex-direction: column;
       align-items: center; justify-content: center; gap: 16px;
       transition: opacity 0.5s;
     }
+    #loading-overlay.active { display: flex; }
     #loading-overlay.done { opacity: 0; pointer-events: none; }
     #loading-overlay h1 { font-size: 24px; font-weight: 700; color: #e8e8f0; }
     #loading-overlay h1 span { color: #DB0A40; }
@@ -168,7 +169,7 @@
 <calcite-shell>
 
   <!-- ═══════════ LOGIN MODAL ═══════════ -->
-  <calcite-dialog id="login-modal" open close-button-disabled outside-close-disabled width-scale="s" slot="dialogs">
+  <calcite-dialog id="login-modal" open modal close-disabled outside-close-disabled width-scale="s" slot="dialogs">
     <div slot="header">Sign In</div>
     <div slot="content">
       <div class="login-brand">
@@ -187,7 +188,7 @@
   </calcite-dialog>
 
   <!-- ═══════════ INTRO MODAL ═══════════ -->
-  <calcite-dialog id="intro-modal" width-scale="m" slot="dialogs">
+  <calcite-dialog id="intro-modal" modal width-scale="m" slot="dialogs">
     <div slot="header">Welcome to Red Bull X-Alps 2025</div>
     <div slot="content">
       <div class="intro-body">
@@ -454,6 +455,7 @@ require([
   // -- DOM refs --
   const statusEl = document.getElementById("load-status");
   const loadingEl = document.getElementById("loading-overlay");
+  loadingEl.classList.add("active"); // Show loading overlay now that app is starting
   const slider = document.getElementById("time-slider");
   const playBtn = document.getElementById("play-btn");
   const soloChip = document.getElementById("solo-chip");
