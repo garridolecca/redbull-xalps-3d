@@ -156,8 +156,8 @@ add_bullet_slide(slide, 0.8, 4.8, 5.5, 2.5, [
 ], size=13)
 add_bullet_slide(slide, 7, 4.8, 5.5, 2.5, [
     "Input: 14 CSV files, 1.16M rows, 37.5M data points",
-    "Output: 294K tracks + 59K climb + 62K wind",
-    "File size reduced: 25 MB > 17 MB",
+    "Output: 294K tracks + 46K thermals + 62K wind",
+    "File size: 18 MB (gzipped ~5MB over network)",
     "Streaming download with progress indicator",
     "JSON parsed client-side in browser",
 ], size=13)
@@ -215,11 +215,11 @@ add_text(slide, 0.8, 1.1, 11, 0.5, "How Indicators Are Derived from Raw Data", s
 add_shape_rect(slide, 0.6, 1.9, 5.8, 2.4, RB_NAVY)
 add_text(slide, 0.8, 2.0, 5, 0.4, 'Climb Events (labeled "Thermals")', size=16, color=GOLD, bold=True)
 add_bullet_slide(slide, 0.8, 2.5, 5.4, 1.8, [
-    "Filter: Vertical Speed > 1.0 m/s",
+    "Filter: Vertical Speed > 1.0 m/s AND UserActivity = Flying",
     "Source: Naviter sensor only (type = 'N')",
     "Sampling: 90-second time buckets per athlete",
     "No clustering into distinct thermal events",
-    "UserActivity field NOT checked (may include hiking)",
+    "Hiking-uphill false positives eliminated by activity filter",
     "Threshold of 1.0 m/s is arbitrary, not a standard",
 ], size=12)
 
@@ -264,14 +264,14 @@ add_shape_rect(slide, 0, 0, 13.333, 0.08, RB_RED)
 add_text(slide, 0.8, 0.4, 11, 0.8, "VISUALIZATION FEATURES", size=36, color=RB_RED, bold=True)
 
 features = [
-    ("3D Race Replay", "Animated athlete markers moving along GPS tracks over Alpine terrain with real-time interpolation", RB_RED),
-    ("Numbered Markers", "Each athlete shows their bib number in a colored circle with callout line to terrain", RGBColor(0xFF, 0x8C, 0x00)),
-    ("Track Lines", "Dual-layer glow effect: translucent outer + bright inner core at actual GPS altitude", GOLD),
-    ("Wind Rose Chart", "Canvas-drawn polar diagram with 16 directions, 4 speed bins, live stats", CYAN),
-    ("Thermal Statistics", "Active count, average and max climb rate, updating every 500ms during playback", GREEN),
-    ("Altitude Profile", "Sparkline elevation chart for solo'd athlete with moving time marker", GREEN),
-    ("Solo Mode", "Filter all data to a single athlete: tracks, climb events, wind, altitude profile", RGBColor(0xAF, 0x52, 0xDE)),
-    ("Dynamic Lighting", "Sun position updates with playback time for realistic day/night transitions", RGBColor(0xFF, 0xD7, 0x00)),
+    ("Live Race Positions", "Dynamic ranking by westward progress. Position numbers on markers update in real-time as athletes overtake", RB_RED),
+    ("Activity Shape Markers", "Triangle = Flying, Circle = Hiking/Resting. Shapes change dynamically with athlete activity status", RGBColor(0xFF, 0x8C, 0x00)),
+    ("Athlete Roster", "35 named athletes with flags, countries. Sidebar shows groundspeed, altitude, activity status, live position", GOLD),
+    ("Wind Rose Chart", "Canvas-drawn polar diagram with 16 directions, 4 speed bins, live stats. Updates during playback", CYAN),
+    ("Thermal Statistics", "Active count, avg/max climb rate. Flying-only filter eliminates hiking false positives", GREEN),
+    ("Altitude Profile", "Sparkline elevation chart for solo'd athlete with moving red time marker", GREEN),
+    ("Solo Mode", "Filter all data to a single athlete: tracks, thermals, wind rose, altitude profile", RGBColor(0xAF, 0x52, 0xDE)),
+    ("Calcite Design + Mobile", "Full Calcite Design System with dark mode. Responsive layout for desktop, tablet, and mobile", ESRI_BLUE),
 ]
 for i, (title, desc, color) in enumerate(features):
     row = i // 2
@@ -313,9 +313,8 @@ add_bullet_slide(slide, 7, 1.9, 5.5, 3, [
     "Throttled analysis updates (every 500ms)",
     "requestIdleCallback for non-critical DOM updates",
     "No map graphics for thermals/wind (charts only)",
-    "Animation: only positions + time display per frame",
+    "Symbol cache keyed by position+color+activity",
     "90-second time buckets reduce data 3x",
-    "4 decimal coordinate precision saves ~30% JSON size",
     "Auto-skip empty time gaps during playback",
     "Shadows + ambient occlusion disabled for GPU perf",
 ], size=13)
