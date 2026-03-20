@@ -742,22 +742,35 @@ require([
   // ================================================================
   // BUILD MARKERS
   // ================================================================
-  // Activity icons as simple SVG paths
-  const ACT_ICONS = {
-    1: '<path d="M20,8 C20,8 24,14 24,18 C24,20 22,22 20,22 L20,26 L18,26 L18,22 C16,22 14,20 14,18 C14,14 18,8 18,8 Z" fill="white" opacity="0.9"/>', // paraglider
-    2: '<path d="M16,10 L16,18 L14,22 L15.5,22 L17,19 L19,19 L20.5,22 L22,22 L20,18 L20,10 Z M18,12 C19.1,12 20,12.9 20,14 L16,14 C16,12.9 16.9,12 18,12 Z" fill="white" opacity="0.9"/>', // boot
-    0: '<rect x="15" y="12" width="3" height="10" rx="1" fill="white" opacity="0.7"/><rect x="20" y="12" width="3" height="10" rx="1" fill="white" opacity="0.7"/>', // pause/rest
-  };
-
   function makeMarkerSvg(num, r, g, b, act) {
-    const icon = ACT_ICONS[act] || '';
-    return "data:image/svg+xml," + encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38">` +
-      `<circle cx="19" cy="19" r="18" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2"/>` +
-      `<text x="14" y="16" text-anchor="middle" fill="white" font-size="${num > 9 ? 9 : 11}" font-weight="bold" font-family="Arial,sans-serif">${num}</text>` +
-      icon +
-      `</svg>`
-    );
+    const fs = num > 9 ? 13 : 15;
+    if (act === 1) {
+      // FLYING: wide paraglider wing shape with number
+      return "data:image/svg+xml," + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="36">` +
+        `<ellipse cx="26" cy="12" rx="24" ry="10" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2"/>` +
+        `<line x1="26" y1="22" x2="26" y2="34" stroke="white" stroke-width="1.5"/>` +
+        `<circle cx="26" cy="34" r="2" fill="white"/>` +
+        `<text x="26" y="17" text-anchor="middle" fill="white" font-size="${fs}" font-weight="bold" font-family="Arial,sans-serif">${num}</text>` +
+        `</svg>`
+      );
+    } else if (act === 2) {
+      // HIKING: triangle/mountain shape with number
+      return "data:image/svg+xml," + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="40">` +
+        `<polygon points="18,2 34,38 2,38" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2" stroke-linejoin="round"/>` +
+        `<text x="18" y="28" text-anchor="middle" fill="white" font-size="${fs}" font-weight="bold" font-family="Arial,sans-serif">${num}</text>` +
+        `</svg>`
+      );
+    } else {
+      // STATIONARY/REST: square with number
+      return "data:image/svg+xml," + encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">` +
+        `<rect x="2" y="2" width="28" height="28" rx="4" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2"/>` +
+        `<text x="16" y="21" text-anchor="middle" fill="white" font-size="${fs}" font-weight="bold" font-family="Arial,sans-serif">${num}</text>` +
+        `</svg>`
+      );
+    }
   }
 
   function buildMarkers() {

@@ -108,8 +108,8 @@ for csv_file in csv_files:
                         new_priority  # temp: sensor priority for dedup
                     ]
 
-                # --- Thermal bucket (Naviter only, strong climb) ---
-                if sensor == 'N' and vs is not None and vs > THERMAL_VS_MIN:
+                # --- Thermal bucket (Naviter only, flying only, strong climb) ---
+                if sensor == 'N' and vs is not None and vs > THERMAL_VS_MIN and act_code == 1:
                     tbk = (aid, ts_int // THERMAL_BUCKET)
                     if tbk not in thermal_buckets or vs > thermal_buckets[tbk][3]:
                         thermal_buckets[tbk] = [
