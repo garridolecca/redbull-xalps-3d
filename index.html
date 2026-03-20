@@ -16,7 +16,24 @@
   <style>
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
     calcite-shell { --calcite-shell-border-color: transparent; }
-    #viewDiv { width: 100%; height: 100%; }
+
+    /* ── MAIN LAYOUT: sidebar + (map + footer) ── */
+    .app-body {
+      display: flex; height: 100%; overflow: hidden;
+    }
+    .left-sidebar {
+      width: 300px; flex-shrink: 0; overflow-y: auto;
+      background: var(--calcite-color-foreground-1);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      scrollbar-width: thin; scrollbar-color: #333 transparent;
+    }
+    .left-sidebar calcite-panel { --calcite-panel-header-border-block-end: none; }
+    .main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    #viewDiv { flex: 1; width: 100%; }
+    @media (max-width: 768px) {
+      .left-sidebar { display: none; }
+      .left-sidebar.open { display: block; position: fixed; top: 50px; left: 0; bottom: 0; z-index: 60; width: 300px; }
+    }
 
     /* ── NAV BAR ── */
     .nav-bar {
@@ -38,19 +55,17 @@
       background: #DB0A40; border-radius: 20px; letter-spacing: 0.5px;
     }
 
-    /* ── PANELS ── */
-    .side-panel {
-      position: fixed; top: 58px; bottom: 100px; z-index: 50; width: 290px;
+    /* ── RIGHT PANEL (floating overlay) ── */
+    .right-panel {
+      position: fixed; top: 58px; bottom: 100px; right: 8px; z-index: 50; width: 280px;
       display: none; overflow: auto;
       background: var(--calcite-color-foreground-1); border: 1px solid var(--calcite-color-border-3);
       border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
     }
-    .side-panel.open { display: flex; flex-direction: column; }
-    .side-panel.left { left: 8px; }
-    .side-panel.right { right: 8px; }
-    .side-panel calcite-panel { flex: 1; overflow: auto; }
+    .right-panel.open { display: flex; flex-direction: column; }
+    .right-panel calcite-panel { flex: 1; overflow: auto; }
     @media (max-width: 640px) {
-      .side-panel { width: calc(100vw - 16px); left: 8px; right: 8px; bottom: 90px; }
+      .right-panel { width: calc(100vw - 16px); left: 8px; right: 8px; bottom: 90px; }
     }
     .panel-section { padding: 12px; border-bottom: 1px solid var(--calcite-color-border-3); }
     .panel-section:last-child { border-bottom: none; }
@@ -262,8 +277,11 @@
     </div>
   </div>
 
-  <!-- ═══════════ LEFT PANEL: ANALYSIS ═══════════ -->
-  <div class="side-panel left" id="panel-start">
+  <!-- ═══════════ MAIN BODY ═══════════ -->
+  <div class="app-body">
+
+  <!-- ═══════════ LEFT SIDEBAR: ANALYSIS (always visible) ═══════════ -->
+  <div class="left-sidebar" id="panel-start">
     <calcite-panel heading="Analysis" id="analysis-panel">
       <!-- Layers -->
       <div class="panel-section">
@@ -311,19 +329,9 @@
     </calcite-panel>
   </div>
 
-  <!-- ═══════════ RIGHT PANEL: ATHLETES ═══════════ -->
-  <div class="side-panel right" id="panel-end">
-    <calcite-panel heading="Athletes" id="athletes-panel">
-      <calcite-button id="show-all-btn" slot="header-actions-end" appearance="outline-fill" kind="danger" scale="s" style="display:none">Show All</calcite-button>
-      <calcite-list id="athlete-list" selection-mode="none"></calcite-list>
-    </calcite-panel>
-  </div>
-
-  <!-- ═══════════ MAP ═══════════ -->
-  <div id="viewDiv"></div>
-
-  <!-- ═══════════ FOOTER: TIME CONTROLS ═══════════ -->
-  <div slot="footer">
+  <!-- ═══════════ MAIN AREA: MAP + TIME ═══════════ -->
+  <div class="main-area">
+    <div id="viewDiv"></div>
     <div class="time-footer">
       <div class="time-top">
         <div>
@@ -348,6 +356,16 @@
         <span>Active: <b id="stat-active">0</b></span>
       </div>
     </div>
+  </div><!-- /main-area -->
+
+  </div><!-- /app-body -->
+
+  <!-- ═══════════ RIGHT PANEL: ATHLETES (floating overlay) ═══════════ -->
+  <div class="right-panel" id="panel-end">
+    <calcite-panel heading="Athletes" id="athletes-panel">
+      <calcite-button id="show-all-btn" slot="header-actions-end" appearance="outline-fill" kind="danger" scale="s" style="display:none">Show All</calcite-button>
+      <calcite-list id="athlete-list" selection-mode="none"></calcite-list>
+    </calcite-panel>
   </div>
 
 </calcite-shell>
@@ -415,14 +433,15 @@ document.getElementById("btn-help").addEventListener("click", () => { introModal
 const panelStart = document.getElementById("panel-start");
 const panelEnd = document.getElementById("panel-end");
 
-function togglePanel(panel) {
-  const other = panel === panelStart ? panelEnd : panelStart;
-  other.classList.remove("open");
-  panel.classList.toggle("open");
-}
-
-document.getElementById("btn-analysis").addEventListener("click", () => togglePanel(panelStart));
-document.getElementById("btn-athletes").addEventListener("click", () => togglePanel(panelEnd));
+// Left panel: toggle on mobile (it's always visible on desktop via CSS)
+document.getElementById("btn-analysis").addEventListener("click", () => {
+  panelEnd.classList.remove("open");
+  panelStart.classList.toggle("open");
+});
+// Right panel: floating overlay toggle
+document.getElementById("btn-athletes").addEventListener("click", () => {
+  panelEnd.classList.toggle("open");
+});
 
 // ================================================================
 // MAIN APP
