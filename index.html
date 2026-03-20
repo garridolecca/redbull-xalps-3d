@@ -264,7 +264,7 @@
 
   <!-- ═══════════ LEFT PANEL: ANALYSIS ═══════════ -->
   <div class="side-panel left" id="panel-start">
-    <calcite-panel heading="Analysis" closable id="analysis-panel">
+    <calcite-panel heading="Analysis" id="analysis-panel">
       <!-- Layers -->
       <div class="panel-section">
         <h3>Layers</h3>
@@ -313,7 +313,7 @@
 
   <!-- ═══════════ RIGHT PANEL: ATHLETES ═══════════ -->
   <div class="side-panel right" id="panel-end">
-    <calcite-panel heading="Athletes" closable id="athletes-panel">
+    <calcite-panel heading="Athletes" id="athletes-panel">
       <calcite-button id="show-all-btn" slot="header-actions-end" appearance="outline-fill" kind="danger" scale="s" style="display:none">Show All</calcite-button>
       <calcite-list id="athlete-list" selection-mode="none"></calcite-list>
     </calcite-panel>
@@ -416,18 +416,13 @@ const panelStart = document.getElementById("panel-start");
 const panelEnd = document.getElementById("panel-end");
 
 function togglePanel(panel) {
-  const isOpen = panel.classList.toggle("open");
-  // Reset calcite-panel closed state when opening
-  if (isOpen) {
-    const cp = panel.querySelector("calcite-panel");
-    if (cp) cp.closed = false;
-  }
+  const other = panel === panelStart ? panelEnd : panelStart;
+  other.classList.remove("open");
+  panel.classList.toggle("open");
 }
 
-document.getElementById("btn-analysis").addEventListener("click", () => { panelEnd.classList.remove("open"); togglePanel(panelStart); });
-document.getElementById("btn-athletes").addEventListener("click", () => { panelStart.classList.remove("open"); togglePanel(panelEnd); });
-document.getElementById("analysis-panel").addEventListener("calcitePanelClose", () => { panelStart.classList.remove("open"); });
-document.getElementById("athletes-panel").addEventListener("calcitePanelClose", () => { panelEnd.classList.remove("open"); });
+document.getElementById("btn-analysis").addEventListener("click", () => togglePanel(panelStart));
+document.getElementById("btn-athletes").addEventListener("click", () => togglePanel(panelEnd));
 
 // ================================================================
 // MAIN APP
@@ -625,7 +620,9 @@ require([
   }
 
   function updateThermals(t, force) {
-    if (!force && Math.abs(t-lastThUpdate) < THERMAL_WINDOW*0.25) return;
+    // Skip during playback unless forced - this is the #1 perf killer
+    if (!force && isPlaying) return;
+    if (!force && Math.abs(t-lastThUpdate) < THERMAL_WINDOW*0.4) return;
     lastThUpdate = t;
     thermalLayer.removeAll();
     const s=t-THERMAL_WINDOW, e=t+THERMAL_WINDOW, sid=soloAthlete?+soloAthlete:null;
@@ -637,17 +634,22 @@ require([
       const th=thermals[i];
       if(sid!==null&&th[5]!==sid) continue;
       visTh.push(th);
-      const vs=th[3],col=thermalColor(vs),h=Math.max(100,vs*200),w=Math.max(80,vs*60);
-      gfx.push(new Graphic({
-        geometry:new Point({longitude:th[0],latitude:th[1],z:th[2],spatialReference:{wkid:4326}}),
-        symbol:new PointSymbol3D({symbolLayers:[new ObjectSymbol3DLayer({resource:{primitive:"cylinder"},material:{color:col},width:w,height:h,depth:w})]})
-      }));
-      cnt++; if(cnt>2000) break;
+      if(cnt<800) {
+        const vs=th[3],col=thermalColor(vs);
+        const sz = 6 + vs * 3;
+        gfx.push(new Graphic({
+          geometry:new Point({longitude:th[0],latitude:th[1],z:th[2],spatialReference:{wkid:4326}}),
+          symbol:new PointSymbol3D({symbolLayers:[
+            new IconSymbol3DLayer({resource:{primitive:"circle"},material:{color:col},size:sz,outline:{color:[255,255,255,0.3],size:0.5}})
+          ]})
+        }));
+      }
+      cnt++;
     }
     thermalLayer.addMany(gfx);
-    document.getElementById("stat-thermals").textContent = cnt;
+    document.getElementById("stat-thermals").textContent = visTh.length;
 
-    // Wind data for analysis panel (same time sync)
+    // Wind data for analysis panel
     const ws=t-WIND_WINDOW, we=t+WIND_WINDOW;
     let wlo=0,whi=wind.length;
     while(wlo<whi){const m=(wlo+whi)>>1;if(wind[m][5]<ws)wlo=m+1;else whi=m;}
@@ -661,7 +663,8 @@ require([
   // WIND
   // ================================================================
   function updateWind(t,force) {
-    if(!force&&Math.abs(t-lastWdUpdate)<WIND_WINDOW*0.3) return;
+    if (!force && isPlaying) return;
+    if(!force&&Math.abs(t-lastWdUpdate)<WIND_WINDOW*0.4) return;
     lastWdUpdate=t; windLayer.removeAll(); if(!windLayer.visible) return;
     const s=t-WIND_WINDOW,e=t+WIND_WINDOW,sid=soloAthlete?+soloAthlete:null;
     let lo=0,hi=wind.length;
@@ -669,16 +672,18 @@ require([
     let cnt=0;const gfx=[];
     for(let i=lo;i<wind.length&&wind[i][5]<=e;i++){
       const w=wind[i]; if(sid!==null&&w[6]!==sid) continue;
-      const ws=w[3],wd=w[4],int=Math.min(1,ws/40);
-      const r=Math.round(72+int*183),g=Math.round(176-int*136),b=Math.round(199-int*55);
-      gfx.push(new Graphic({
-        geometry:new Point({longitude:w[0],latitude:w[1],z:w[2],spatialReference:{wkid:4326}}),
-        symbol:new PointSymbol3D({symbolLayers:[
-          new ObjectSymbol3DLayer({resource:{primitive:"cone"},material:{color:[r,g,b,0.75]},width:Math.max(60,ws*3),height:Math.max(150,ws*15),depth:Math.max(60,ws*3),heading:wd,tilt:90})
-        ]}),
-        popupTemplate:{title:"Wind",content:`<b>${ws}</b> km/h from <b>${wd}&deg; (${COMPASS[Math.round(wd/22.5)%16]})</b><br>Alt: ${w[2]}m`}
-      }));
-      cnt++; if(cnt>1500) break;
+      if(cnt<500) {
+        const ws=w[3],intensity=Math.min(1,ws/40);
+        const r=Math.round(72+intensity*183),g=Math.round(176-intensity*136),b=Math.round(199-intensity*55);
+        gfx.push(new Graphic({
+          geometry:new Point({longitude:w[0],latitude:w[1],z:w[2],spatialReference:{wkid:4326}}),
+          symbol:new PointSymbol3D({symbolLayers:[
+            new IconSymbol3DLayer({resource:{primitive:"circle"},material:{color:[r,g,b,0.7]},size:5+ws*0.2,outline:{color:[r,g,b,0.9],size:0.5}})
+          ]}),
+          popupTemplate:{title:"Wind",content:`<b>${ws}</b> km/h from <b>${w[4]}&deg; (${COMPASS[Math.round(w[4]/22.5)%16]})</b><br>Alt: ${w[2]}m`}
+        }));
+      }
+      cnt++;
     }
     windLayer.addMany(gfx);
     document.getElementById("stat-wind").textContent = cnt;
@@ -928,7 +933,13 @@ require([
       isPlaying = !isPlaying;
       playBtn.setAttribute("icon-start", isPlaying ? "pause" : "play");
       playBtn.setAttribute("kind", isPlaying ? "danger" : "brand");
-      if (isPlaying) lastFrameMs = performance.now();
+      if (isPlaying) {
+        lastFrameMs = performance.now();
+      } else {
+        // When pausing, refresh thermals/wind that were skipped during playback
+        updateThermals(currentTime, true);
+        updateWind(currentTime, true);
+      }
     });
 
     document.querySelectorAll(".spd-btn").forEach(btn => {
@@ -953,11 +964,17 @@ require([
       if(e.code==="ArrowLeft"){currentTime=Math.max(minTs,currentTime-3600);slider.value=currentTime;updateAll();}
     });
 
-    // Animation loop
+    // Animation loop - only positions + time during playback (fast path)
     function tick(now) {
       if (isPlaying) {
         const dt=(now-lastFrameMs)/1000;
-        if(dt>0&&dt<1){currentTime+=dt*playSpeed;if(currentTime>maxTs)currentTime=minTs;slider.value=currentTime;updateAll();}
+        if(dt>0&&dt<1){
+          currentTime+=dt*playSpeed;
+          if(currentTime>maxTs) currentTime=minTs;
+          slider.value=currentTime;
+          updateTimeDisplay(currentTime);
+          updatePositions(currentTime);
+        }
       }
       lastFrameMs=now;requestAnimationFrame(tick);
     }
