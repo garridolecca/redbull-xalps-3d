@@ -232,40 +232,63 @@
     <div slot="content">
       <div class="intro-body">
         <div class="intro-section">
+          <h3>About the Race</h3>
+          <p>The <b>Red Bull X-Alps</b> is an adventure race across the European Alps where athletes must travel from Salzburg, Austria to Monaco by <b>paragliding or hiking</b> &mdash; no motorized transport allowed. Athletes carry their own paraglider (~30 kg) and choose when to fly vs. hike based on weather conditions. First to reach the finish line wins.</p>
+        </div>
+        <div class="intro-section">
           <h3>Data Pipeline</h3>
-          <p>Built from raw GPS telemetry collected during the race (June 12-27, 2025).</p>
+          <p>This dashboard visualizes raw GPS telemetry from 35 athletes over 17 race days (June 12&ndash;27, 2025).</p>
           <div class="pipeline">
             <div class="pipe-step pipe-src">Naviter GPS</div><span class="pipe-arrow">&rarr;</span>
             <div class="pipe-step pipe-src">Pub/Sub</div><span class="pipe-arrow">&rarr;</span>
             <div class="pipe-step pipe-proc">BigQuery</div><span class="pipe-arrow">&rarr;</span>
             <div class="pipe-step pipe-proc">Python ETL</div><span class="pipe-arrow">&rarr;</span>
-            <div class="pipe-step pipe-out">JSON 25MB</div><span class="pipe-arrow">&rarr;</span>
+            <div class="pipe-step pipe-out">JSON 17MB</div><span class="pipe-arrow">&rarr;</span>
             <div class="pipe-step pipe-viz">ArcGIS 3D</div>
           </div>
+          <p>Each athlete carries a <b>Naviter Omni</b> GPS instrument that records 18 fields per fix: lat, lon, GPS altitude, barometric altitude, altitude above ground, speed, groundspeed, heading, vertical speed, windspeed, wind direction, activity mode, airspace, rest status, nightpass status, GPS quality, and additional metadata.</p>
+          <p><b>Processing:</b> 37.5M raw GPS fixes were deduplicated into 90-second time buckets with sensor priority (Naviter &gt; Satellite &gt; Flarm &gt; OGN). Coordinates rounded to 4 decimal places (~11m accuracy). Output: 294K track points, 59K climb events, 62K wind observations.</p>
+        </div>
+        <div class="intro-section">
+          <h3>Analysis Methodology &amp; Assumptions</h3>
+          <p>The analysis panel derives insights from raw sensor fields. <b>These are interpretations, not direct measurements:</b></p>
           <ul>
-            <li><b>37.5M GPS fixes</b> from 35 athletes, 4 sensor types</li>
-            <li>Deduplicated via 60s time buckets with sensor priority</li>
-            <li>Output: 439K tracks, 80K thermals, 62K wind observations</li>
+            <li><b>Climb Events (labeled "Thermals"):</b> Any GPS fix where the raw <b>Vertical Speed</b> field exceeds <b>1.0 m/s</b>, from Naviter sensors only. This is a simple filter &mdash; no clustering, no spatial analysis, no weather correlation. Positive vertical speed likely indicates thermal lift (rising warm air), but could also be ridge lift, wave lift, or sensor noise. The <code>UserActivity</code> field was <b>not</b> checked, so some points may be from hiking uphill, not flying.</li>
+            <li><b>Wind Rose:</b> Built from the raw <b>Windspeed</b> (km/h) and <b>Wind Direction</b> (degrees) fields recorded by the Naviter Omni instrument. These are onboard measurements, not weather station data. Sampled every 5 minutes per athlete. The chart shows all observations within &plusmn;1.5 hours of the current time.</li>
+            <li><b>Thermal Stats (Active / Avg / Max):</b> Count, mean, and maximum of Vertical Speed values exceeding 1.0 m/s within &plusmn;1 hour of the current time. "Active" is the number of qualifying GPS fixes, not the number of distinct thermal events.</li>
+            <li><b>Altitude Profile:</b> Plots the raw <b>GPS Altitude</b> (ellipsoid height in meters) over the athlete's full track timeline. The red line marks the current playback time.</li>
+            <li><b>Activity Mode:</b> Directly from the <code>UserActivity</code> field: <b>F</b> = Flying, <b>H</b> = Hiking, <b>S</b> = Stationary. Only available from Naviter Omni devices.</li>
           </ul>
         </div>
         <div class="intro-section">
-          <h3>Map Layers Explained</h3>
+          <h3>What You See on the Map</h3>
           <ul>
-            <li><b>Glowing Lines</b> = athlete GPS tracks at actual altitude</li>
-            <li><b>Colored Dots</b> = athlete current position (animated)</li>
-            <li><b>Gold/Red 3D Cylinders</b> = thermal lift detected (taller = stronger climb)</li>
-            <li><b>Blue 3D Cones</b> = wind direction &amp; speed (bigger = stronger wind)</li>
+            <li><b>Glowing colored lines</b> = each athlete's GPS track rendered at actual altitude above the terrain</li>
+            <li><b>Numbered circles</b> = athlete current positions, animated along their tracks. The number is their bib/race number</li>
           </ul>
         </div>
         <div class="intro-section">
           <h3>Controls</h3>
           <table class="ctrl-table">
-            <tr><td>Space</td><td>Play / Pause animation</td></tr>
-            <tr><td>&larr; / &rarr;</td><td>Jump &plusmn;1 hour</td></tr>
-            <tr><td>Time Slider</td><td>Scrub through the 17-day race</td></tr>
-            <tr><td>SOLO button</td><td>Filter all data to one athlete (tracks, thermals, wind)</td></tr>
-            <tr><td>Double-click name</td><td>Fly camera to that athlete</td></tr>
+            <tr><td>Play / Pause</td><td>Start or stop the race animation</td></tr>
+            <tr><td>Time Slider</td><td>Drag to scrub through the 17-day race</td></tr>
+            <tr><td>Speed (0.5x&ndash;12x)</td><td>How fast time advances (1x = 1 hour per second)</td></tr>
+            <tr><td>Space bar</td><td>Toggle play / pause</td></tr>
+            <tr><td>&larr; / &rarr; keys</td><td>Jump backward / forward 1 hour</td></tr>
+            <tr><td>SOLO (pin icon)</td><td>Filter all data to one athlete only</td></tr>
+            <tr><td>Double-click name</td><td>Fly the 3D camera to that athlete</td></tr>
+            <tr><td>? button</td><td>Reopen this guide</td></tr>
           </table>
+        </div>
+        <div class="intro-section">
+          <h3>Data Source &amp; Limitations</h3>
+          <ul>
+            <li>Raw data exported from Google BigQuery (Pub/Sub subscription: <code>naviter_to_bigquery</code>)</li>
+            <li>Sensor data quality varies: GPS Quality field ranges 0&ndash;50 (signal-to-noise ratio). Some fixes in valleys may be inaccurate</li>
+            <li>Wind and activity fields are only populated from <b>Naviter (N)</b> sensor type, not from Satellite, Flarm, or OGN</li>
+            <li>Athlete names are approximate &mdash; bib-to-name mapping may contain inaccuracies</li>
+            <li>The 1.0 m/s climb threshold is an arbitrary cutoff, not a standard paragliding definition</li>
+          </ul>
         </div>
       </div>
       <div style="text-align:center;padding:16px 0 4px">
