@@ -342,8 +342,10 @@
 <!-- ═══════════ LOADING OVERLAY ═══════════ -->
 <div id="loading-overlay">
   <h1><span>RED BULL</span> X-ALPS 2025</h1>
-  <calcite-loader label="Loading race data" type="indeterminate"></calcite-loader>
-  <span id="load-status" style="font-size:13px;color:#666">Loading race data...</span>
+  <div style="width:260px;text-align:center">
+    <calcite-progress id="load-progress" type="indeterminate"></calcite-progress>
+    <span id="load-status" style="font-size:13px;color:#666;display:block;margin-top:10px">Loading race data...</span>
+  </div>
 </div>
 
 <script>
@@ -458,27 +460,60 @@ require([
   const showAllBtn = document.getElementById("show-all-btn");
 
   // ================================================================
-  // LOAD DATA
+  // LOAD DATA (with download progress)
   // ================================================================
-  fetch(DATA_URL)
-    .then(r => { statusEl.textContent = "Parsing..."; return r.json(); })
-    .then(data => {
+  const progressBar = document.getElementById("load-progress");
+
+  (async function loadData() {
+    try {
+      const resp = await fetch(DATA_URL);
+      const total = +resp.headers.get("Content-Length") || 0;
+      const reader = resp.body.getReader();
+      const chunks = [];
+      let received = 0;
+
+      if (total) { progressBar.type = "determinate"; progressBar.value = 0; }
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.length;
+        if (total) {
+          const pct = received / total;
+          progressBar.value = pct;
+          statusEl.textContent = `Downloading... ${(received/1024/1024).toFixed(1)} / ${(total/1024/1024).toFixed(1)} MB`;
+        } else {
+          statusEl.textContent = `Downloading... ${(received/1024/1024).toFixed(1)} MB`;
+        }
+      }
+
+      statusEl.textContent = "Parsing JSON...";
+      progressBar.type = "indeterminate";
+      // Yield to UI before heavy parse
+      await new Promise(r => setTimeout(r, 50));
+
+      const blob = new Blob(chunks);
+      const text = await blob.text();
+      const data = JSON.parse(text);
+
       raceData = data;
       minTs = data.meta.min_ts; maxTs = data.meta.max_ts;
       currentTime = minTs; thermals = data.thermals; wind = data.wind;
 
-      // Map slider range to timestamps
       slider.min = minTs; slider.max = maxTs; slider.value = minTs; slider.step = 60;
-      slider.minLabel = "Start"; slider.maxLabel = "End";
 
-      statusEl.textContent = "Building 3D...";
-      requestAnimationFrame(() => {
-        buildTracks(); buildMarkers(); buildSidebar();
-        setupControls(); updatePositions(currentTime); updateThermals(currentTime,true);
-        loadingEl.classList.add("done");
-      });
-    })
-    .catch(err => { statusEl.textContent = "Error: " + err.message; });
+      statusEl.textContent = "Building 3D scene...";
+      await new Promise(r => setTimeout(r, 50));
+
+      buildTracks(); buildMarkers(); buildSidebar();
+      setupControls(); updatePositions(currentTime); updateThermals(currentTime, true);
+      loadingEl.classList.add("done");
+    } catch (err) {
+      statusEl.textContent = "Error: " + err.message;
+      console.error(err);
+    }
+  })();
 
   // ================================================================
   // BUILD TRACKS

@@ -20,8 +20,8 @@ TS_MIN = 1749513600   # 2025-06-10 00:00 UTC
 TS_MAX = 1751155200   # 2025-06-28 24:00 UTC
 MAX_ATHLETE_ID = 37
 
-TRACK_BUCKET = 60     # seconds per track bucket
-THERMAL_BUCKET = 60   # seconds per thermal bucket
+TRACK_BUCKET = 90     # seconds per track bucket (was 60)
+THERMAL_BUCKET = 90   # seconds per thermal bucket (was 60)
 WIND_BUCKET = 300     # seconds per wind bucket
 THERMAL_VS_MIN = 1.0  # m/s climb threshold
 
@@ -102,7 +102,7 @@ for csv_file in csv_files:
                 new_priority = sensor_priority.get(sensor, 0)
                 if existing is None or new_priority > existing[5]:
                     track_buckets[aid][bk] = [
-                        round(lon, 5), round(lat, 5), round(alt, 1),
+                        round(lon, 4), round(lat, 4), int(alt),
                         ts_int, act_code,
                         new_priority  # temp: sensor priority for dedup
                     ]
@@ -112,8 +112,8 @@ for csv_file in csv_files:
                     tbk = (aid, ts_int // THERMAL_BUCKET)
                     if tbk not in thermal_buckets or vs > thermal_buckets[tbk][3]:
                         thermal_buckets[tbk] = [
-                            round(lon, 5), round(lat, 5), round(alt, 1),
-                            round(vs, 2), ts_int, int(aid)
+                            round(lon, 4), round(lat, 4), int(alt),
+                            round(vs, 1), ts_int, int(aid)
                         ]
 
                 # --- Wind bucket (Naviter only) ---
@@ -121,7 +121,7 @@ for csv_file in csv_files:
                     wbk = (aid, ts_int // WIND_BUCKET)
                     if wbk not in wind_buckets:
                         wind_buckets[wbk] = [
-                            round(lon, 5), round(lat, 5), round(alt, 1),
+                            round(lon, 4), round(lat, 4), int(alt),
                             round(ws, 1), wd, ts_int, int(aid)
                         ]
 
