@@ -745,28 +745,18 @@ require([
   function makeMarkerSvg(num, r, g, b, act) {
     const fs = num > 9 ? 13 : 15;
     if (act === 1) {
-      // FLYING: wide paraglider wing shape with number
+      // FLYING: triangle pointing up
       return "data:image/svg+xml," + encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="36">` +
-        `<ellipse cx="26" cy="12" rx="24" ry="10" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2"/>` +
-        `<line x1="26" y1="22" x2="26" y2="34" stroke="white" stroke-width="1.5"/>` +
-        `<circle cx="26" cy="34" r="2" fill="white"/>` +
-        `<text x="26" y="17" text-anchor="middle" fill="white" font-size="${fs}" font-weight="bold" font-family="Arial,sans-serif">${num}</text>` +
-        `</svg>`
-      );
-    } else if (act === 2) {
-      // HIKING: triangle/mountain shape with number
-      return "data:image/svg+xml," + encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="40">` +
-        `<polygon points="18,2 34,38 2,38" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2" stroke-linejoin="round"/>` +
+        `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="38">` +
+        `<polygon points="18,2 34,36 2,36" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2.5" stroke-linejoin="round"/>` +
         `<text x="18" y="28" text-anchor="middle" fill="white" font-size="${fs}" font-weight="bold" font-family="Arial,sans-serif">${num}</text>` +
         `</svg>`
       );
     } else {
-      // STATIONARY/REST: square with number
+      // HIKING or RESTING: circle
       return "data:image/svg+xml," + encodeURIComponent(
         `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32">` +
-        `<rect x="2" y="2" width="28" height="28" rx="4" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2"/>` +
+        `<circle cx="16" cy="16" r="14" fill="rgb(${r},${g},${b})" stroke="white" stroke-width="2.5"/>` +
         `<text x="16" y="21" text-anchor="middle" fill="white" font-size="${fs}" font-weight="bold" font-family="Arial,sans-serif">${num}</text>` +
         `</svg>`
       );
