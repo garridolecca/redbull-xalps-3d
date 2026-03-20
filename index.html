@@ -828,11 +828,29 @@ require([
   }
 
   function updateSidebarAlts(t) {
+    const list = document.getElementById("athlete-list");
+    const items = [];
     for (const aid of Object.keys(markers)) {
       const el = document.getElementById("alt-"+aid);
+      const posEl = document.getElementById("pos-"+aid);
       if (!el) continue;
-      if (!markers[aid].visible) { el.textContent = "--"; continue; }
-      el.textContent = markers[aid].attributes.alt + "m";
+      const attr = markers[aid].attributes;
+      if (!markers[aid].visible) {
+        el.textContent = "--";
+        if (posEl) posEl.textContent = "-";
+        items.push({aid, pos: 999});
+        continue;
+      }
+      el.textContent = attr.alt + "m";
+      const pos = attr.position || 99;
+      if (posEl) posEl.textContent = pos <= 35 ? "#" + pos : "-";
+      items.push({aid, pos});
+    }
+    // Reorder list items by race position
+    items.sort((a,b) => a.pos - b.pos);
+    for (const item of items) {
+      const el = list.querySelector(`calcite-list-item[data-aid="${item.aid}"]`);
+      if (el) list.appendChild(el);
     }
   }
 
@@ -1063,8 +1081,8 @@ require([
       const [r,g,b] = t.color;
       const ath = ATHLETES[aid] || { name:"Athlete #"+aid, country:"", flag:"" };
       const item = document.createElement("calcite-list-item");
-      item.setAttribute("label", `${ath.flag} #${aid} ${ath.name}`);
-      item.setAttribute("description", `${ath.country} | ${t.points.length.toLocaleString()} pts`);
+      item.setAttribute("label", `${ath.flag} ${ath.name}`);
+      item.setAttribute("description", `Bib #${aid} | ${ath.country}`);
       item.dataset.aid = aid;
 
       // Color dot
@@ -1074,13 +1092,12 @@ require([
       dot.slot = "content-start";
       item.appendChild(dot);
 
-      // Alt badge
-      const badge = document.createElement("span");
-      badge.className = "alt-badge";
-      badge.id = "alt-"+aid;
-      badge.textContent = "--";
-      badge.slot = "content-end";
-      item.appendChild(badge);
+      // Position + Alt badge
+      const info = document.createElement("div");
+      info.slot = "content-end";
+      info.style.cssText = "text-align:right;font-size:11px;line-height:1.4;font-variant-numeric:tabular-nums;min-width:55px";
+      info.innerHTML = `<span id="pos-${aid}" style="font-weight:700;color:#DB0A40">-</span><br><span id="alt-${aid}" style="color:var(--calcite-color-text-3)">--</span>`;
+      item.appendChild(info);
 
       // Solo action
       const soloAction = document.createElement("calcite-action");
