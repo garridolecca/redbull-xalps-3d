@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Red Bull X-Alps 2025 | 3D Race Replay &amp; Thermal Analysis</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🏔</text></svg>">
 
   <!-- Calcite Design System -->
   <script type="module" src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"></script>
@@ -167,7 +168,7 @@
 <calcite-shell>
 
   <!-- ═══════════ LOGIN MODAL ═══════════ -->
-  <calcite-modal id="login-modal" open close-button-disabled outside-close-disabled width-scale="s" slot="modals">
+  <calcite-dialog id="login-modal" open close-button-disabled outside-close-disabled width-scale="s" slot="dialogs">
     <div slot="header">Sign In</div>
     <div slot="content">
       <div class="login-brand">
@@ -183,10 +184,10 @@
       <div class="login-error" id="login-error"></div>
     </div>
     <calcite-button slot="primary" id="login-btn" width="full" kind="brand" appearance="solid">Sign In</calcite-button>
-  </calcite-modal>
+  </calcite-dialog>
 
   <!-- ═══════════ INTRO MODAL ═══════════ -->
-  <calcite-modal id="intro-modal" width-scale="m" slot="modals">
+  <calcite-dialog id="intro-modal" width-scale="m" slot="dialogs">
     <div slot="header">Welcome to Red Bull X-Alps 2025</div>
     <div slot="content">
       <div class="intro-body">
@@ -229,7 +230,7 @@
       </div>
     </div>
     <calcite-button slot="primary" id="intro-start-btn" kind="brand">Start Exploring</calcite-button>
-  </calcite-modal>
+  </calcite-dialog>
 
   <!-- ═══════════ HEADER ═══════════ -->
   <div slot="header">
