@@ -39,9 +39,18 @@
     }
 
     /* ── PANELS ── */
-    calcite-shell-panel { --calcite-shell-panel-width: 280px; --calcite-shell-panel-max-width: 320px; }
+    .side-panel {
+      position: fixed; top: 50px; z-index: 50; width: 290px; max-height: calc(100vh - 110px);
+      display: none; overflow: hidden;
+      background: var(--calcite-color-foreground-1); border: 1px solid var(--calcite-color-border-3);
+      border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
+    .side-panel.open { display: block; }
+    .side-panel.left { left: 8px; }
+    .side-panel.right { right: 8px; }
+    .side-panel calcite-panel { --calcite-panel-max-height: calc(100vh - 120px); }
     @media (max-width: 640px) {
-      calcite-shell-panel { --calcite-shell-panel-width: 100vw; --calcite-shell-panel-max-width: 100vw; }
+      .side-panel { width: calc(100vw - 16px); left: 8px; right: 8px; }
     }
     .panel-section { padding: 12px; border-bottom: 1px solid var(--calcite-color-border-3); }
     .panel-section:last-child { border-bottom: none; }
@@ -254,7 +263,7 @@
   </div>
 
   <!-- ═══════════ LEFT PANEL: ANALYSIS ═══════════ -->
-  <calcite-shell-panel slot="panel-start" id="panel-start" display-mode="overlay" collapsed>
+  <div class="side-panel left" id="panel-start">
     <calcite-panel heading="Analysis" closable id="analysis-panel">
       <!-- Layers -->
       <div class="panel-section">
@@ -300,15 +309,15 @@
         <canvas id="alt-profile-canvas"></canvas>
       </div>
     </calcite-panel>
-  </calcite-shell-panel>
+  </div>
 
   <!-- ═══════════ RIGHT PANEL: ATHLETES ═══════════ -->
-  <calcite-shell-panel slot="panel-end" id="panel-end" display-mode="overlay" collapsed>
+  <div class="side-panel right" id="panel-end">
     <calcite-panel heading="Athletes" closable id="athletes-panel">
       <calcite-button id="show-all-btn" slot="header-actions-end" appearance="outline-fill" kind="danger" scale="s" style="display:none">Show All</calcite-button>
       <calcite-list id="athlete-list" selection-mode="none"></calcite-list>
     </calcite-panel>
-  </calcite-shell-panel>
+  </div>
 
   <!-- ═══════════ MAP ═══════════ -->
   <div id="viewDiv"></div>
@@ -405,10 +414,13 @@ document.getElementById("btn-help").addEventListener("click", () => { introModal
 
 const panelStart = document.getElementById("panel-start");
 const panelEnd = document.getElementById("panel-end");
-document.getElementById("btn-analysis").addEventListener("click", () => { panelStart.collapsed = !panelStart.collapsed; });
-document.getElementById("btn-athletes").addEventListener("click", () => { panelEnd.collapsed = !panelEnd.collapsed; });
-document.getElementById("analysis-panel").addEventListener("calcitePanelClose", () => { panelStart.collapsed = true; });
-document.getElementById("athletes-panel").addEventListener("calcitePanelClose", () => { panelEnd.collapsed = true; });
+
+function togglePanel(panel) { panel.classList.toggle("open"); }
+
+document.getElementById("btn-analysis").addEventListener("click", () => togglePanel(panelStart));
+document.getElementById("btn-athletes").addEventListener("click", () => togglePanel(panelEnd));
+document.getElementById("analysis-panel").addEventListener("calcitePanelClose", () => { panelStart.classList.remove("open"); });
+document.getElementById("athletes-panel").addEventListener("calcitePanelClose", () => { panelEnd.classList.remove("open"); });
 
 // ================================================================
 // MAIN APP
