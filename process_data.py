@@ -113,7 +113,7 @@ for csv_file in csv_files:
                     if tbk not in thermal_buckets or vs > thermal_buckets[tbk][3]:
                         thermal_buckets[tbk] = [
                             round(lon, 5), round(lat, 5), round(alt, 1),
-                            round(vs, 2), ts_int
+                            round(vs, 2), ts_int, int(aid)
                         ]
 
                 # --- Wind bucket (Naviter only) ---
@@ -122,7 +122,7 @@ for csv_file in csv_files:
                     if wbk not in wind_buckets:
                         wind_buckets[wbk] = [
                             round(lon, 5), round(lat, 5), round(alt, 1),
-                            round(ws, 1), wd, ts_int
+                            round(ws, 1), wd, ts_int, int(aid)
                         ]
 
 print(f"\nProcessed {total_points:,} points (skipped {skipped:,} out-of-range)")
@@ -180,8 +180,8 @@ output = {
     "meta": {
         "min_ts": min_ts, "max_ts": max_ts,
         "track_fields": ["lon", "lat", "alt", "ts", "activity"],
-        "thermal_fields": ["lon", "lat", "alt", "vs", "ts"],
-        "wind_fields": ["lon", "lat", "alt", "ws", "wd", "ts"],
+        "thermal_fields": ["lon", "lat", "alt", "vs", "ts", "aid"],
+        "wind_fields": ["lon", "lat", "alt", "ws", "wd", "ts", "aid"],
         "activity_codes": {"0": "Stationary", "1": "Flying", "2": "Hiking", "-1": "Unknown"},
     }
 }

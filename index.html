@@ -135,7 +135,14 @@
       border-radius: 10px; backdrop-filter: blur(20px);
       overflow-y: auto; scrollbar-width: thin; scrollbar-color: #333 transparent;
     }
-    #sidebar h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #6668; padding: 12px 14px 6px; }
+    #sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 6px; }
+    #sidebar-header h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #6668; }
+    .show-all-btn {
+      font-size: 10px; padding: 3px 8px; background: rgba(219,10,64,0.3); border: 1px solid rgba(219,10,64,0.5);
+      color: #f88; border-radius: 4px; cursor: pointer; display: none; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .show-all-btn.visible { display: block; }
+    .show-all-btn:hover { background: rgba(219,10,64,0.5); }
     .athlete-row {
       display: flex; align-items: center; gap: 8px;
       padding: 5px 14px; cursor: pointer; transition: background 0.15s;
@@ -143,6 +150,7 @@
     }
     .athlete-row:hover { background: rgba(255,255,255,0.05); }
     .athlete-row.hidden { opacity: 0.3; }
+    .athlete-row.solo { background: rgba(219,10,64,0.15); border-left: 3px solid #DB0A40; }
     .athlete-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2); }
     .athlete-label { flex: 1; }
     .athlete-alt { font-size: 11px; color: #8888a0; font-variant-numeric: tabular-nums; min-width: 48px; text-align: right; }
@@ -302,6 +310,7 @@
           <tr><td>Time Slider</td><td>Drag to scrub through the entire race timeline</td></tr>
           <tr><td>Speed Buttons</td><td>0.5h/s, 1h/s, 4h/s, or 12h/s playback speed</td></tr>
           <tr><td>Click Athlete</td><td>Toggle athlete track visibility on/off</td></tr>
+          <tr><td>Right-click Athlete</td><td>Solo mode: show only this athlete's tracks, thermals &amp; wind. Right-click again or click "Show All" to reset</td></tr>
           <tr><td>Double-click Athlete</td><td>Fly camera to athlete's current position</td></tr>
           <tr><td>Layers Panel</td><td>Toggle Tracks, Thermals, Wind, and Athlete markers</td></tr>
           <tr><td>Mouse / Touch</td><td>Orbit, pan, and zoom the 3D scene</td></tr>
@@ -344,7 +353,10 @@
   <label class="toggle-row"><input type="checkbox" id="toggle-markers" checked> Athletes</label>
 </div>
 
-<div id="sidebar"><h2>Athletes</h2><div id="athlete-list"></div></div>
+<div id="sidebar">
+  <div id="sidebar-header"><h2>Athletes</h2><button class="show-all-btn" id="show-all-btn">Show All</button></div>
+  <div id="athlete-list"></div>
+</div>
 
 <div id="time-panel">
   <div id="time-display">
@@ -517,6 +529,7 @@ require([
   let lastFrameMs = 0;
   let thermalsSorted = [];
   let windSorted = [];
+  let soloAthlete = null;  // null = show all, "5" = solo on athlete 5
 
   const statusEl = document.getElementById("load-status");
 
@@ -645,17 +658,19 @@ require([
     return [220, 20, 60, 0.85];
   }
 
-  function updateThermals(t) {
-    if (Math.abs(t - lastThermalUpdate) < THERMAL_WINDOW * 0.1) return;
+  function updateThermals(t, force) {
+    if (!force && Math.abs(t - lastThermalUpdate) < THERMAL_WINDOW * 0.1) return;
     lastThermalUpdate = t;
     thermalLayer.removeAll();
     const startT = t - THERMAL_WINDOW, endT = t + THERMAL_WINDOW;
+    const soloId = soloAthlete ? +soloAthlete : null;
     let lo = 0, hi = thermalsSorted.length;
     while (lo < hi) { const mid = (lo + hi) >> 1; if (thermalsSorted[mid][4] < startT) lo = mid + 1; else hi = mid; }
     let count = 0;
     const graphics = [];
     for (let i = lo; i < thermalsSorted.length && thermalsSorted[i][4] <= endT; i++) {
       const th = thermalsSorted[i];
+      if (soloId !== null && th[5] !== soloId) continue;
       const vs = th[3], col = thermalColor(vs);
       const height = Math.max(100, vs * 200), width = Math.max(80, vs * 60);
       graphics.push(new Graphic({
@@ -672,18 +687,20 @@ require([
   }
 
   let lastWindUpdate = 0;
-  function updateWind(t) {
-    if (Math.abs(t - lastWindUpdate) < WIND_WINDOW * 0.15) return;
+  function updateWind(t, force) {
+    if (!force && Math.abs(t - lastWindUpdate) < WIND_WINDOW * 0.15) return;
     lastWindUpdate = t;
     windLayer.removeAll();
     if (!windLayer.visible) return;
     const startT = t - WIND_WINDOW, endT = t + WIND_WINDOW;
+    const soloId = soloAthlete ? +soloAthlete : null;
     let lo = 0, hi = windSorted.length;
     while (lo < hi) { const mid = (lo + hi) >> 1; if (windSorted[mid][5] < startT) lo = mid + 1; else hi = mid; }
     let count = 0;
     const graphics = [];
     for (let i = lo; i < windSorted.length && windSorted[i][5] <= endT; i++) {
       const w = windSorted[i];
+      if (soloId !== null && w[6] !== soloId) continue;
       const ws = w[3], intensity = Math.min(1, ws / 40);
       const r = Math.round(72 + intensity * 120), g = Math.round(176 - intensity * 80), b = Math.round(199 + intensity * 56);
       graphics.push(new Graphic({
@@ -766,26 +783,88 @@ require([
     view.environment.lighting.date = d;
   }
 
+  function setSoloAthlete(aid) {
+    const showAllBtn = document.getElementById("show-all-btn");
+    const rows = document.querySelectorAll(".athlete-row");
+
+    if (aid && aid !== soloAthlete) {
+      // Enter solo mode
+      soloAthlete = aid;
+      showAllBtn.classList.add("visible");
+
+      for (const id of Object.keys(trackGraphics)) {
+        const isSolo = (id === aid);
+        athleteVisible[id] = isSolo;
+        trackGraphics[id].visible = isSolo;
+        if (!isSolo && markers[id]) markers[id].visible = false;
+      }
+      rows.forEach(row => {
+        const rowAid = row.dataset.aid;
+        row.classList.toggle("hidden", rowAid !== aid);
+        row.classList.toggle("solo", rowAid === aid);
+      });
+    } else {
+      // Exit solo mode - show all
+      soloAthlete = null;
+      showAllBtn.classList.remove("visible");
+
+      for (const id of Object.keys(trackGraphics)) {
+        athleteVisible[id] = true;
+        trackGraphics[id].visible = true;
+      }
+      rows.forEach(row => {
+        row.classList.remove("hidden", "solo");
+      });
+    }
+
+    // Force refresh thermals and wind with new filter
+    updateThermals(currentTime, true);
+    updateWind(currentTime, true);
+    updatePositions(currentTime);
+  }
+
   function buildSidebar() {
     const list = document.getElementById("athlete-list");
+    const showAllBtn = document.getElementById("show-all-btn");
+
+    showAllBtn.addEventListener("click", () => setSoloAthlete(null));
+
     for (const aid of Object.keys(raceData.tracks).sort((a,b) => +a - +b)) {
       const t = raceData.tracks[aid];
       if (t.points.length < 2) continue;
       const [r, g, b] = t.color;
       const row = document.createElement("div");
       row.className = "athlete-row";
+      row.dataset.aid = aid;
       row.innerHTML = `<div class="athlete-dot" style="background:rgb(${r},${g},${b})"></div><span class="athlete-label">Athlete #${aid}</span><span class="athlete-alt" id="alt-${aid}">--</span>`;
-      row.addEventListener("click", () => {
-        athleteVisible[aid] = !athleteVisible[aid];
-        row.classList.toggle("hidden", !athleteVisible[aid]);
-        trackGraphics[aid].visible = athleteVisible[aid];
-        if (!athleteVisible[aid]) markers[aid].visible = false;
+
+      // Left-click: toggle visibility (in normal mode) or select solo athlete
+      row.addEventListener("click", e => {
+        if (soloAthlete) {
+          // In solo mode, clicking another athlete switches solo to them
+          setSoloAthlete(aid);
+        } else {
+          // Normal mode: toggle individual
+          athleteVisible[aid] = !athleteVisible[aid];
+          row.classList.toggle("hidden", !athleteVisible[aid]);
+          trackGraphics[aid].visible = athleteVisible[aid];
+          if (!athleteVisible[aid]) markers[aid].visible = false;
+        }
       });
+
+      // Right-click: enter solo mode for this athlete
+      row.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        setSoloAthlete(aid === soloAthlete ? null : aid);
+      });
+
+      // Double-click: fly to athlete
       row.addEventListener("dblclick", e => {
         e.preventDefault();
         const mk = markers[aid];
         if (mk && mk.visible && mk.geometry) view.goTo({ target: mk.geometry, zoom: 14, tilt: 70 }, { duration: 1500 });
       });
+
       list.appendChild(row);
     }
   }
