@@ -788,6 +788,30 @@ require([
     if (soloAthlete) drawAltProfile(soloAthlete, currentTime);
   }
 
+  // Lightweight version: just collects data + updates charts (no map graphics)
+  function updateAnalysisOnly(t) {
+    const sid = soloAthlete ? +soloAthlete : null;
+    const visTh = [], visWd = [];
+
+    // Thermals in window
+    const ts = t - THERMAL_WINDOW, te = t + THERMAL_WINDOW;
+    let lo = 0, hi = thermals.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (thermals[m][4] < ts) lo = m + 1; else hi = m; }
+    for (let i = lo; i < thermals.length && thermals[i][4] <= te; i++) {
+      const th = thermals[i]; if (sid !== null && th[5] !== sid) continue; visTh.push(th);
+    }
+
+    // Wind in window
+    const ws = t - WIND_WINDOW, we = t + WIND_WINDOW;
+    let wlo = 0, whi = wind.length;
+    while (wlo < whi) { const m = (wlo + whi) >> 1; if (wind[m][5] < ws) wlo = m + 1; else whi = m; }
+    for (let i = wlo; i < wind.length && wind[i][5] <= we; i++) {
+      const w = wind[i]; if (sid !== null && w[6] !== sid) continue; visWd.push(w);
+    }
+
+    updateAnalysis(visTh, visWd);
+  }
+
   function drawWindRose(data) {
     const c=document.getElementById("wind-rose-canvas"),ctx=c.getContext("2d");
     const dpr=window.devicePixelRatio||1, sz=182;
@@ -1046,8 +1070,8 @@ require([
       if(e.code==="ArrowLeft"){currentTime=Math.max(minTs,currentTime-3600);slider.value=currentTime;updateAll();}
     });
 
-    // Animation loop - only positions + time during playback (fast path)
-    let emptyFrames = 0;
+    // Animation loop
+    let emptyFrames = 0, lastAnalysisMs = 0;
     function tick(now) {
       if (isPlaying) {
         const dt=(now-lastFrameMs)/1000;
@@ -1058,7 +1082,13 @@ require([
           updateTimeDisplay(currentTime);
           updatePositions(currentTime);
 
-          // Auto-skip if no athletes visible (pre-race or gap)
+          // Update analysis panel every ~1.5 seconds (cheap: no map graphics)
+          if (now - lastAnalysisMs > 1500) {
+            lastAnalysisMs = now;
+            updateAnalysisOnly(currentTime);
+          }
+
+          // Auto-skip if no athletes visible
           const ac = +document.getElementById("stat-active").textContent;
           if(ac===0) { emptyFrames++; if(emptyFrames>30) { currentTime+=3600; emptyFrames=0; } }
           else { emptyFrames=0; }
