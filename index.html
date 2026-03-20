@@ -1,1150 +1,921 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="calcite-mode-dark">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Red Bull X-Alps 2025 | 3D Race Replay &amp; Thermal Analysis</title>
-  <link rel="stylesheet" href="https://js.arcgis.com/4.30/esri/themes/dark/main.css">
+
+  <!-- Calcite Design System -->
+  <script type="module" src="https://js.arcgis.com/calcite-components/2.13.2/calcite.esm.js"></script>
+  <link rel="stylesheet" href="https://js.arcgis.com/calcite-components/2.13.2/calcite.css">
+  <!-- ArcGIS Maps SDK -->
+  <link rel="stylesheet" href="https://js.arcgis.com/4.31/esri/themes/dark/main.css">
+  <script src="https://js.arcgis.com/4.31/"></script>
+
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a12; color: #e0e0e8; }
-    #viewDiv { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
+    calcite-shell { --calcite-shell-border-color: transparent; }
+    #viewDiv { width: 100%; height: 100%; }
 
-    /* ── LOGIN SCREEN ── */
-    #login-screen {
-      position: fixed; inset: 0; z-index: 9999;
-      background: linear-gradient(135deg, #0a0a18 0%, #121228 40%, #1a0a18 100%);
-      display: flex; align-items: center; justify-content: center;
-    }
-    .login-card {
-      width: 380px; padding: 44px 36px 36px;
-      background: rgba(20,20,36,0.85); border: 1px solid rgba(255,255,255,0.06);
-      border-radius: 16px; backdrop-filter: blur(30px);
-      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
-    }
-    .login-brand { text-align: center; margin-bottom: 32px; }
-    .login-brand h1 { font-size: 26px; font-weight: 800; letter-spacing: 1.5px; margin-bottom: 4px; }
-    .login-brand h1 span { color: #DB0A40; }
-    .login-brand p { font-size: 12px; color: #666; letter-spacing: 1px; text-transform: uppercase; }
-    .login-field { margin-bottom: 16px; }
-    .login-field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
-    .login-field input {
-      width: 100%; padding: 11px 14px; font-size: 14px;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; color: #e0e0e8; outline: none; transition: border-color 0.2s;
-    }
-    .login-field input:focus { border-color: #DB0A40; }
-    .login-btn {
-      width: 100%; padding: 12px; margin-top: 8px; font-size: 14px; font-weight: 600;
-      background: #DB0A40; color: #fff; border: none; border-radius: 8px;
-      cursor: pointer; letter-spacing: 0.5px; transition: background 0.2s, transform 0.1s;
-    }
-    .login-btn:hover { background: #f01050; }
-    .login-btn:active { transform: scale(0.98); }
-    .login-error { color: #ff4466; font-size: 12px; text-align: center; margin-top: 12px; min-height: 18px; }
-    .login-footer { text-align: center; margin-top: 24px; font-size: 11px; color: #444; }
-
-    /* ── INTRO MODAL ── */
-    #intro-overlay {
-      position: fixed; inset: 0; z-index: 9998;
-      background: rgba(6,6,14,0.85); backdrop-filter: blur(8px);
-      display: none; align-items: center; justify-content: center;
-    }
-    #intro-overlay.visible { display: flex; }
-    .intro-modal {
-      width: 720px; max-width: 92vw; max-height: 88vh;
-      background: rgba(16,16,30,0.96); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 16px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #333 transparent;
-      box-shadow: 0 32px 100px rgba(0,0,0,0.7);
-    }
-    .intro-header {
-      padding: 32px 36px 20px; text-align: center;
+    /* ── NAV BAR ── */
+    .nav-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 12px; height: 50px;
+      background: rgba(20,20,36,0.92); backdrop-filter: blur(16px);
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .intro-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
-    .intro-header h1 span { color: #DB0A40; }
-    .intro-header p { font-size: 13px; color: #888; }
-    .intro-body { padding: 24px 36px; }
-    .intro-section { margin-bottom: 24px; }
-    .intro-section h2 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #DB0A40; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .intro-section h2::before { content: ''; display: block; width: 3px; height: 16px; background: #DB0A40; border-radius: 2px; }
-    .intro-section p, .intro-section li { font-size: 13px; line-height: 1.7; color: #bbb; }
-    .intro-section ul { list-style: none; padding: 0; }
-    .intro-section li { padding: 3px 0; padding-left: 16px; position: relative; }
-    .intro-section li::before { content: ''; position: absolute; left: 0; top: 11px; width: 6px; height: 6px; border-radius: 50%; background: #DB0A40; opacity: 0.6; }
+    .nav-brand { display: flex; align-items: center; gap: 10px; }
+    .nav-brand h1 { font-size: 16px; font-weight: 700; letter-spacing: 1px; color: #e8e8f0; margin: 0; }
+    .nav-brand h1 span { color: #DB0A40; }
+    .nav-brand .subtitle { font-size: 11px; color: #666; display: none; }
+    @media (min-width: 640px) { .nav-brand .subtitle { display: block; } }
+    .nav-actions { display: flex; gap: 4px; align-items: center; }
+    .solo-chip { display: none; }
+    .solo-chip[active] {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; font-size: 11px; font-weight: 700; color: #fff;
+      background: #DB0A40; border-radius: 20px; letter-spacing: 0.5px;
+    }
 
-    /* Pipeline diagram */
-    .pipeline {
-      display: flex; align-items: center; justify-content: center; gap: 0;
-      margin: 16px 0; flex-wrap: wrap;
+    /* ── PANELS ── */
+    calcite-shell-panel { --calcite-shell-panel-width: 280px; --calcite-shell-panel-max-width: 320px; }
+    @media (max-width: 640px) {
+      calcite-shell-panel { --calcite-shell-panel-width: 100vw; --calcite-shell-panel-max-width: 100vw; }
     }
-    .pipe-step {
-      padding: 10px 16px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
-      border-radius: 8px; text-align: center; white-space: nowrap;
+    .panel-section { padding: 12px; border-bottom: 1px solid var(--calcite-color-border-3); }
+    .panel-section:last-child { border-bottom: none; }
+    .panel-section h3 {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--calcite-color-text-3); margin: 0 0 8px 0;
+      display: flex; align-items: center; gap: 6px;
     }
-    .pipe-arrow { font-size: 18px; color: #444; padding: 0 6px; }
-    .pipe-src { background: rgba(219,10,64,0.15); border: 1px solid rgba(219,10,64,0.3); color: #f06; }
-    .pipe-proc { background: rgba(255,165,0,0.12); border: 1px solid rgba(255,165,0,0.25); color: #ffa500; }
-    .pipe-out { background: rgba(52,199,89,0.12); border: 1px solid rgba(52,199,89,0.25); color: #34c759; }
-    .pipe-viz { background: rgba(50,173,230,0.12); border: 1px solid rgba(50,173,230,0.25); color: #32ade6; }
+    .panel-section h3 .dot { width: 6px; height: 6px; border-radius: 50%; }
 
-    .controls-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-    .controls-table td { padding: 5px 10px; font-size: 12px; color: #bbb; border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .controls-table td:first-child { color: #fff; font-weight: 600; font-family: 'Consolas', monospace; font-size: 11px; width: 140px; }
-
-    .intro-footer {
-      padding: 20px 36px 28px; text-align: center;
-      border-top: 1px solid rgba(255,255,255,0.06);
+    /* Toggle rows */
+    .toggle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0; font-size: 13px;
     }
-    .intro-start-btn {
-      padding: 14px 48px; font-size: 15px; font-weight: 700;
-      background: #DB0A40; color: #fff; border: none; border-radius: 10px;
-      cursor: pointer; letter-spacing: 1px; text-transform: uppercase;
-      transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
-      box-shadow: 0 4px 24px rgba(219,10,64,0.3);
-    }
-    .intro-start-btn:hover { background: #f01050; box-shadow: 0 6px 32px rgba(219,10,64,0.5); }
-    .intro-start-btn:active { transform: scale(0.97); }
-    .help-btn {
-      position: absolute; top: 12px; right: 250px; z-index: 11;
-      width: 32px; height: 32px; border-radius: 50%;
-      background: rgba(14,14,24,0.88); border: 1px solid rgba(255,255,255,0.1);
-      color: #aaa; font-size: 16px; font-weight: 700; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(20px); transition: background 0.15s;
-    }
-    .help-btn:hover { background: rgba(219,10,64,0.3); color: #fff; }
-
-    /* ── HEADER ── */
-    #header {
-      position: absolute; top: 0; left: 0; right: 0; z-index: 10;
-      display: flex; align-items: center; gap: 16px;
-      padding: 12px 20px;
-      background: linear-gradient(180deg, rgba(10,10,18,0.92) 0%, rgba(10,10,18,0.6) 80%, transparent 100%);
-      pointer-events: none;
-    }
-    #header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
-    #header h1 span { color: #DB0A40; }
-    #header .subtitle { font-size: 12px; color: #8888a0; letter-spacing: 0.5px; }
-
-    /* ── SIDEBAR ── */
-    #sidebar {
-      position: absolute; top: 70px; right: 12px; z-index: 10;
-      width: 220px; max-height: calc(100vh - 180px);
-      background: rgba(14,14,24,0.88); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 10px; backdrop-filter: blur(20px);
-      overflow-y: auto; scrollbar-width: thin; scrollbar-color: #333 transparent;
-    }
-    #sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 6px; }
-    #sidebar-header h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #6668; }
-    .show-all-btn {
-      font-size: 10px; padding: 3px 8px; background: rgba(219,10,64,0.3); border: 1px solid rgba(219,10,64,0.5);
-      color: #f88; border-radius: 4px; cursor: pointer; display: none; text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .show-all-btn.visible { display: block; }
-    .show-all-btn:hover { background: rgba(219,10,64,0.5); }
-    .athlete-row {
-      display: flex; align-items: center; gap: 8px;
-      padding: 5px 14px; cursor: pointer; transition: background 0.15s;
-      font-size: 13px; user-select: none;
-    }
-    .athlete-row:hover { background: rgba(255,255,255,0.05); }
-    .athlete-row.hidden { opacity: 0.3; }
-    .athlete-row.solo { background: rgba(219,10,64,0.15); border-left: 3px solid #DB0A40; }
-    .solo-btn {
-      display: none; padding: 1px 5px; font-size: 9px; font-weight: 700;
-      background: rgba(219,10,64,0.2); border: 1px solid rgba(219,10,64,0.4);
-      color: #DB0A40; border-radius: 3px; cursor: pointer; text-transform: uppercase;
-      letter-spacing: 0.5px; flex-shrink: 0; line-height: 1.4;
-    }
-    .athlete-row:hover .solo-btn { display: block; }
-    .athlete-row.solo .solo-btn { display: block; background: #DB0A40; color: #fff; }
-    .athlete-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2); }
-    .athlete-label { flex: 1; }
-    .athlete-alt { font-size: 11px; color: #8888a0; font-variant-numeric: tabular-nums; min-width: 48px; text-align: right; }
-
-    /* ── LAYER TOGGLES ── */
-    #layer-toggles {
-      position: absolute; top: 70px; left: 12px; z-index: 10;
-      background: rgba(14,14,24,0.88); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 10px; backdrop-filter: blur(20px); padding: 12px 14px;
-    }
-    #layer-toggles h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #6668; margin-bottom: 8px; }
-    .toggle-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; cursor: pointer; user-select: none; }
-    .toggle-row input { accent-color: #DB0A40; }
-    .thermal-icon { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, #FFD700, #FF4500); }
-    .wind-icon { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, #48B0C7, #0078FF); }
-
-    /* ── TIME CONTROLS ── */
-    #time-panel {
-      position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
-      background: linear-gradient(0deg, rgba(10,10,18,0.95) 0%, rgba(10,10,18,0.7) 80%, transparent 100%);
-      padding: 24px 20px 16px;
-    }
-    #time-display { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
-    #time-day { font-size: 22px; font-weight: 700; }
-    #time-day .day-num { color: #DB0A40; }
-    #time-date { font-size: 14px; color: #aaa; }
-    #time-clock { font-size: 28px; font-weight: 300; letter-spacing: 2px; }
-    #slider-row { display: flex; align-items: center; gap: 12px; }
-    #time-slider {
-      flex: 1; height: 6px; -webkit-appearance: none; appearance: none;
-      background: rgba(255,255,255,0.12); border-radius: 3px; outline: none; cursor: pointer;
-    }
-    #time-slider::-webkit-slider-thumb {
-      -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
-      background: #DB0A40; border: 2px solid #fff; cursor: grab; box-shadow: 0 0 10px rgba(219,10,64,0.5);
-    }
-    #time-slider::-moz-range-thumb {
-      width: 18px; height: 18px; border-radius: 50%;
-      background: #DB0A40; border: 2px solid #fff; cursor: grab;
-    }
-    .btn {
-      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15);
-      color: #fff; padding: 6px 14px; border-radius: 6px; cursor: pointer;
-      font-size: 13px; transition: background 0.15s; user-select: none;
-    }
-    .btn:hover { background: rgba(255,255,255,0.18); }
-    .btn.active { background: rgba(219,10,64,0.4); border-color: #DB0A40; }
-    .speed-btns { display: flex; gap: 4px; }
-
-    /* ── STATS BAR ── */
-    #stats-bar { display: flex; gap: 24px; margin-top: 8px; font-size: 11px; color: #8888a0; }
-    #stats-bar span b { color: #ccc; }
-
-    /* ── LOADING ── */
-    #loading {
-      position: absolute; inset: 0; z-index: 100;
-      background: #0a0a12; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 20px;
-      transition: opacity 0.6s;
-    }
-    #loading.done { opacity: 0; pointer-events: none; }
-    #loading h1 { font-size: 28px; font-weight: 700; }
-    #loading h1 span { color: #DB0A40; }
-    .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #DB0A40; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    #load-status { font-size: 13px; color: #666; }
-
-    /* ── THERMAL LEGEND ── */
-    /* ── ANALYSIS PANEL ── */
-    #analysis-panel {
-      position: absolute; bottom: 115px; left: 12px; z-index: 10;
-      background: rgba(14,14,24,0.92); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 10px; backdrop-filter: blur(20px);
-      width: 210px; display: none; overflow: hidden;
-    }
-    .ap-section { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    .ap-section:last-child { border-bottom: none; }
-    .ap-title {
-      font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: #666;
-      margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
-    }
-    .ap-title-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .toggle-label { display: flex; align-items: center; gap: 8px; }
 
     /* Thermal stats */
-    .thermal-stats { display: flex; gap: 10px; margin-bottom: 6px; }
-    .thermal-stat { text-align: center; flex: 1; }
-    .thermal-stat .val { font-size: 16px; font-weight: 700; color: #FF8C00; line-height: 1.2; }
-    .thermal-stat .lbl { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .stat-card {
+      flex: 1; text-align: center; padding: 8px 4px;
+      background: var(--calcite-color-foreground-2); border-radius: 8px;
+    }
+    .stat-val { font-size: 18px; font-weight: 700; line-height: 1.2; }
+    .stat-val.thermal { color: #FF8C00; }
+    .stat-val.wind { color: #48B0C7; }
+    .stat-lbl { font-size: 9px; color: var(--calcite-color-text-3); text-transform: uppercase; letter-spacing: 0.5px; }
     .legend-bar { width: 100%; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #FFD700, #FF8C00, #FF4500, #DC143C); }
-    .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: #555; margin-top: 2px; }
-    .ap-hint { font-size: 9px; color: #444; margin-top: 6px; font-style: italic; }
+    .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--calcite-color-text-3); margin-top: 2px; }
+    .hint { font-size: 10px; color: var(--calcite-color-text-3); margin-top: 8px; font-style: italic; }
 
     /* Wind rose */
-    #wind-rose-wrap { text-align: center; }
     #wind-rose-canvas { display: block; margin: 0 auto; }
-    .wr-speed-legend { display: flex; justify-content: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
-    .wr-speed-item { display: flex; align-items: center; gap: 3px; font-size: 9px; color: #888; }
-    .wr-speed-dot { width: 8px; height: 8px; border-radius: 2px; }
-    .wr-stats { display: flex; justify-content: center; gap: 12px; margin-top: 6px; }
-    .wr-stat .val { font-size: 14px; font-weight: 700; color: #48B0C7; }
-    .wr-stat .lbl { font-size: 9px; color: #666; text-transform: uppercase; }
-    .wr-stat { text-align: center; }
+    .wr-legend { display: flex; justify-content: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .wr-legend-item { display: flex; align-items: center; gap: 3px; font-size: 9px; color: var(--calcite-color-text-3); }
+    .wr-dot { width: 8px; height: 8px; border-radius: 2px; }
 
-    .esri-ui-corner .esri-component { border-radius: 8px !important; }
+    /* Altitude profile */
+    #alt-profile-wrap { display: none; }
+    #alt-profile-wrap.visible { display: block; }
+    #alt-profile-canvas { display: block; width: 100%; height: 80px; border-radius: 6px; background: var(--calcite-color-foreground-2); }
+
+    /* Athlete list */
+    .athlete-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid rgba(255,255,255,0.15);
+    }
+    calcite-list-item { --calcite-list-item-spacing: 4px; }
+    .alt-badge {
+      font-size: 11px; color: var(--calcite-color-text-3);
+      font-variant-numeric: tabular-nums; min-width: 50px; text-align: right;
+    }
+
+    /* ── TIME CONTROLS (footer) ── */
+    .time-footer {
+      background: rgba(20,20,36,0.95); backdrop-filter: blur(16px);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      padding: 8px 16px 10px; user-select: none;
+    }
+    .time-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+    .time-day { font-size: 16px; font-weight: 700; }
+    .time-day .dn { color: #DB0A40; }
+    .time-date { font-size: 12px; color: var(--calcite-color-text-3); margin-left: 8px; }
+    .time-clock { font-size: 22px; font-weight: 300; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+    .time-mid { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .time-mid calcite-slider { flex: 1; --calcite-slider-handle-size: 16px; }
+    .speed-group { display: flex; gap: 2px; flex-shrink: 0; }
+    .time-stats { display: flex; gap: 16px; font-size: 11px; color: var(--calcite-color-text-3); flex-wrap: wrap; }
+    .time-stats b { color: var(--calcite-color-text-2); }
+    @media (max-width: 480px) {
+      .speed-group { display: none; }
+      .time-clock { font-size: 18px; }
+      .time-footer { padding: 6px 10px 8px; }
+    }
+
+    /* ── LOGIN ── */
+    .login-brand { text-align: center; margin-bottom: 20px; }
+    .login-brand h2 { font-size: 22px; font-weight: 800; margin: 0; }
+    .login-brand h2 span { color: #DB0A40; }
+    .login-brand p { font-size: 11px; color: var(--calcite-color-text-3); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+    .login-error { color: #ff4466; font-size: 12px; text-align: center; min-height: 18px; margin-top: 8px; }
+
+    /* ── INTRO MODAL ── */
+    .intro-body { padding: 0 4px; }
+    .intro-section { margin-bottom: 20px; }
+    .intro-section h3 {
+      font-size: 13px; font-weight: 700; color: #DB0A40; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .intro-section h3::before { content: ''; width: 3px; height: 14px; background: #DB0A40; border-radius: 2px; }
+    .intro-section p, .intro-section li { font-size: 12px; line-height: 1.7; color: var(--calcite-color-text-2); }
+    .intro-section ul { padding-left: 16px; }
+    .pipeline {
+      display: flex; align-items: center; justify-content: center; gap: 0;
+      margin: 12px 0; flex-wrap: wrap;
+    }
+    .pipe-step {
+      padding: 6px 10px; font-size: 10px; font-weight: 600; text-transform: uppercase;
+      border-radius: 6px; text-align: center; white-space: nowrap;
+    }
+    .pipe-arrow { font-size: 14px; color: #444; padding: 0 4px; }
+    .pipe-src { background: rgba(219,10,64,0.12); border: 1px solid rgba(219,10,64,0.25); color: #f06; }
+    .pipe-proc { background: rgba(255,165,0,0.1); border: 1px solid rgba(255,165,0,0.2); color: #ffa500; }
+    .pipe-out { background: rgba(52,199,89,0.1); border: 1px solid rgba(52,199,89,0.2); color: #34c759; }
+    .pipe-viz { background: rgba(50,173,230,0.1); border: 1px solid rgba(50,173,230,0.2); color: #32ade6; }
+    .ctrl-table { width: 100%; border-collapse: collapse; }
+    .ctrl-table td { padding: 4px 8px; font-size: 11px; border-bottom: 1px solid var(--calcite-color-border-3); }
+    .ctrl-table td:first-child { font-weight: 600; font-family: monospace; width: 130px; color: var(--calcite-color-text-1); }
+
+    /* ── LOADING OVERLAY ── */
+    #loading-overlay {
+      position: fixed; inset: 0; z-index: 9000;
+      background: #1a1a2e; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+      transition: opacity 0.5s;
+    }
+    #loading-overlay.done { opacity: 0; pointer-events: none; }
+    #loading-overlay h1 { font-size: 24px; font-weight: 700; color: #e8e8f0; }
+    #loading-overlay h1 span { color: #DB0A40; }
   </style>
 </head>
 <body>
 
-<!-- ╔══════════════════════════════════════════╗ -->
-<!-- ║          LOGIN SCREEN                    ║ -->
-<!-- ╚══════════════════════════════════════════╝ -->
-<div id="login-screen">
-  <div class="login-card">
-    <div class="login-brand">
-      <h1><span>RED BULL</span> X-ALPS</h1>
-      <p>3D Race Intelligence Platform</p>
-    </div>
-    <div class="login-field">
-      <label>Username</label>
-      <input type="text" id="login-user" autocomplete="username" autofocus>
-    </div>
-    <div class="login-field">
-      <label>Password</label>
-      <input type="password" id="login-pass" autocomplete="current-password">
-    </div>
-    <button class="login-btn" id="login-btn">Sign In</button>
-    <div class="login-error" id="login-error"></div>
-    <div class="login-footer">Authorized personnel only</div>
-  </div>
-</div>
+<calcite-shell>
 
-<!-- ╔══════════════════════════════════════════╗ -->
-<!-- ║          INTRO / WELCOME MODAL           ║ -->
-<!-- ╚══════════════════════════════════════════╝ -->
-<div id="intro-overlay">
-  <div class="intro-modal">
-    <div class="intro-header">
-      <h1><span>RED BULL</span> X-ALPS 2025</h1>
-      <p>3D Race Replay &amp; Thermal Analysis Dashboard</p>
+  <!-- ═══════════ LOGIN MODAL ═══════════ -->
+  <calcite-modal id="login-modal" open close-button-disabled outside-close-disabled width-scale="s" slot="modals">
+    <div slot="header">Sign In</div>
+    <div slot="content">
+      <div class="login-brand">
+        <h2><span>RED BULL</span> X-ALPS</h2>
+        <p>3D Race Intelligence Platform</p>
+      </div>
+      <calcite-label>Username
+        <calcite-input id="login-user" type="text" autofocus></calcite-input>
+      </calcite-label>
+      <calcite-label style="margin-top:12px">Password
+        <calcite-input id="login-pass" type="password"></calcite-input>
+      </calcite-label>
+      <div class="login-error" id="login-error"></div>
     </div>
-    <div class="intro-body">
+    <calcite-button slot="primary" id="login-btn" width="full" kind="brand" appearance="solid">Sign In</calcite-button>
+  </calcite-modal>
 
-      <div class="intro-section">
-        <h2>Data Pipeline</h2>
-        <p>This visualization was built from raw GPS telemetry collected during the Red Bull X-Alps 2025 race (June 12-27). Here is how the data flows from devices to this dashboard:</p>
-        <div class="pipeline">
-          <div class="pipe-step pipe-src">Naviter GPS<br><small>Devices</small></div>
-          <span class="pipe-arrow">&rarr;</span>
-          <div class="pipe-step pipe-src">Google<br><small>Pub/Sub</small></div>
-          <span class="pipe-arrow">&rarr;</span>
-          <div class="pipe-step pipe-proc">BigQuery<br><small>Raw Storage</small></div>
-          <span class="pipe-arrow">&rarr;</span>
-          <div class="pipe-step pipe-proc">Python ETL<br><small>Parse &amp; Downsample</small></div>
-          <span class="pipe-arrow">&rarr;</span>
-          <div class="pipe-step pipe-out">JSON<br><small>25 MB</small></div>
-          <span class="pipe-arrow">&rarr;</span>
-          <div class="pipe-step pipe-viz">ArcGIS JS<br><small>SceneView 3D</small></div>
+  <!-- ═══════════ INTRO MODAL ═══════════ -->
+  <calcite-modal id="intro-modal" width-scale="m" slot="modals">
+    <div slot="header">Welcome to Red Bull X-Alps 2025</div>
+    <div slot="content">
+      <div class="intro-body">
+        <div class="intro-section">
+          <h3>Data Pipeline</h3>
+          <p>Built from raw GPS telemetry collected during the race (June 12-27, 2025).</p>
+          <div class="pipeline">
+            <div class="pipe-step pipe-src">Naviter GPS</div><span class="pipe-arrow">&rarr;</span>
+            <div class="pipe-step pipe-src">Pub/Sub</div><span class="pipe-arrow">&rarr;</span>
+            <div class="pipe-step pipe-proc">BigQuery</div><span class="pipe-arrow">&rarr;</span>
+            <div class="pipe-step pipe-proc">Python ETL</div><span class="pipe-arrow">&rarr;</span>
+            <div class="pipe-step pipe-out">JSON 25MB</div><span class="pipe-arrow">&rarr;</span>
+            <div class="pipe-step pipe-viz">ArcGIS 3D</div>
+          </div>
+          <ul>
+            <li><b>37.5M GPS fixes</b> from 35 athletes, 4 sensor types</li>
+            <li>Deduplicated via 60s time buckets with sensor priority</li>
+            <li>Output: 439K tracks, 80K thermals, 62K wind observations</li>
+          </ul>
         </div>
-        <ul>
-          <li><strong>Source:</strong> 37.5M GPS fixes from 35 athletes across 4 sensor types (Naviter, Flarm, OGN, Satellite)</li>
-          <li><strong>Processing:</strong> Parsed pipe/semicolon-delimited PubSub messages, deduplicated via 60-second time buckets with sensor priority ranking, extracted thermal climb events (>1.0 m/s) and wind observations</li>
-          <li><strong>Output:</strong> 439K track points, 80K thermal events, 62K wind observations covering 17 race days</li>
-        </ul>
-      </div>
-
-      <div class="intro-section">
-        <h2>Visualization Layers</h2>
-        <ul>
-          <li><strong>3D Track Lines</strong> &mdash; Each athlete's full route rendered as a glowing polyline at actual GPS altitude above the Alpine terrain. Dual-layer glow effect (wide translucent + narrow bright core)</li>
-          <li><strong>Animated Athlete Markers</strong> &mdash; Colored dots that move along each track in real-time, with smooth interpolation between data points. Shows current altitude in the sidebar</li>
-          <li><strong>Thermal Columns</strong> &mdash; 3D cylinders at locations where athletes detected rising air (vertical speed > 1 m/s). Height and width scale with climb rate. Color: gold (1 m/s) &rarr; orange &rarr; red &rarr; crimson (4+ m/s). Time-filtered to a &plusmn;1 hour window</li>
-          <li><strong>Wind Observations</strong> &mdash; Colored dots showing windspeed measured by Naviter instruments. Intensity maps to speed. Toggle via Layers panel</li>
-          <li><strong>Dynamic Lighting</strong> &mdash; Sun position updates automatically with the time slider, creating realistic day/night transitions across the Alps</li>
-        </ul>
-      </div>
-
-      <div class="intro-section">
-        <h2>Controls</h2>
-        <table class="controls-table">
-          <tr><td>Space</td><td>Play / Pause race animation</td></tr>
-          <tr><td>Arrow Left/Right</td><td>Jump backward / forward 1 hour</td></tr>
-          <tr><td>Time Slider</td><td>Drag to scrub through the entire race timeline</td></tr>
-          <tr><td>Speed Buttons</td><td>0.5h/s, 1h/s, 4h/s, or 12h/s playback speed</td></tr>
-          <tr><td>Click Athlete</td><td>Toggle athlete track visibility on/off</td></tr>
-          <tr><td>Right-click Athlete</td><td>Solo mode: show only this athlete's tracks, thermals &amp; wind. Right-click again or click "Show All" to reset</td></tr>
-          <tr><td>Double-click Athlete</td><td>Fly camera to athlete's current position</td></tr>
-          <tr><td>Layers Panel</td><td>Toggle Tracks, Thermals, Wind, and Athlete markers</td></tr>
-          <tr><td>Mouse / Touch</td><td>Orbit, pan, and zoom the 3D scene</td></tr>
-          <tr><td>? Button</td><td>Re-open this guide at any time</td></tr>
-        </table>
-      </div>
-
-      <div class="intro-section">
-        <h2>Technical Details</h2>
-        <ul>
-          <li><strong>Rendering:</strong> ArcGIS Maps SDK for JavaScript 4.30, SceneView with world elevation, absolute-height positioning</li>
-          <li><strong>Performance:</strong> Binary search for time-filtered layers, throttled updates, capped at 4000 thermal / 3000 wind graphics per frame</li>
-          <li><strong>Data Schema:</strong> 18 fields per GPS fix including lat, lon, altitude (GPS + barometric), groundspeed, vertical speed, windspeed, wind direction, activity mode (Flying/Hiking/Stationary), rest &amp; nightpass status, GPS quality (SNR 0-50)</li>
-        </ul>
+        <div class="intro-section">
+          <h3>Map Layers Explained</h3>
+          <ul>
+            <li><b>Glowing Lines</b> = athlete GPS tracks at actual altitude</li>
+            <li><b>Colored Dots</b> = athlete current position (animated)</li>
+            <li><b>Gold/Red 3D Cylinders</b> = thermal lift detected (taller = stronger climb)</li>
+            <li><b>Blue 3D Cones</b> = wind direction &amp; speed (bigger = stronger wind)</li>
+          </ul>
+        </div>
+        <div class="intro-section">
+          <h3>Controls</h3>
+          <table class="ctrl-table">
+            <tr><td>Space</td><td>Play / Pause animation</td></tr>
+            <tr><td>&larr; / &rarr;</td><td>Jump &plusmn;1 hour</td></tr>
+            <tr><td>Time Slider</td><td>Scrub through the 17-day race</td></tr>
+            <tr><td>SOLO button</td><td>Filter all data to one athlete (tracks, thermals, wind)</td></tr>
+            <tr><td>Double-click name</td><td>Fly camera to that athlete</td></tr>
+          </table>
+        </div>
       </div>
     </div>
-    <div class="intro-footer">
-      <button class="intro-start-btn" id="intro-start-btn">Start Exploring</button>
+    <calcite-button slot="primary" id="intro-start-btn" kind="brand">Start Exploring</calcite-button>
+  </calcite-modal>
+
+  <!-- ═══════════ HEADER ═══════════ -->
+  <div slot="header">
+    <div class="nav-bar">
+      <div class="nav-brand">
+        <h1><span>RED BULL</span> X-ALPS 2025</h1>
+        <span class="subtitle">3D Race Replay &amp; Thermal Analysis</span>
+      </div>
+      <div class="nav-actions">
+        <span class="solo-chip" id="solo-chip">SOLO #<b id="solo-chip-id"></b>
+          <calcite-button id="solo-clear-btn" kind="inverse" appearance="transparent" icon-start="x" scale="s" round></calcite-button>
+        </span>
+        <calcite-button id="btn-analysis" appearance="transparent" kind="neutral" icon-start="graph-bar-side-by-side" scale="s" round title="Analysis Panel"></calcite-button>
+        <calcite-button id="btn-athletes" appearance="transparent" kind="neutral" icon-start="users" scale="s" round title="Athletes Panel"></calcite-button>
+        <calcite-button id="btn-help" appearance="transparent" kind="neutral" icon-start="question" scale="s" round title="Help"></calcite-button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ╔══════════════════════════════════════════╗ -->
-<!-- ║          MAIN APPLICATION                ║ -->
-<!-- ╚══════════════════════════════════════════╝ -->
-<div id="viewDiv"></div>
+  <!-- ═══════════ LEFT PANEL: ANALYSIS ═══════════ -->
+  <calcite-shell-panel slot="panel-start" id="panel-start" display-mode="overlay" collapsed>
+    <calcite-panel heading="Analysis" closable id="analysis-panel">
+      <!-- Layers -->
+      <div class="panel-section">
+        <h3>Layers</h3>
+        <div class="toggle-row"><span class="toggle-label"><calcite-icon icon="line" scale="s"></calcite-icon> Tracks</span><calcite-switch id="sw-tracks" checked></calcite-switch></div>
+        <div class="toggle-row"><span class="toggle-label"><calcite-icon icon="point" scale="s"></calcite-icon> Athletes</span><calcite-switch id="sw-markers" checked></calcite-switch></div>
+        <div class="toggle-row"><span class="toggle-label"><calcite-icon icon="altitude" scale="s"></calcite-icon> Thermals</span><calcite-switch id="sw-thermals" checked></calcite-switch></div>
+        <div class="toggle-row"><span class="toggle-label"><calcite-icon icon="compass" scale="s"></calcite-icon> Wind</span><calcite-switch id="sw-wind"></calcite-switch></div>
+      </div>
 
-<div id="header">
+      <!-- Thermal Stats -->
+      <div class="panel-section">
+        <h3><span class="dot" style="background:linear-gradient(135deg,#FFD700,#FF4500)"></span> Thermals</h3>
+        <div class="stat-row">
+          <div class="stat-card"><div class="stat-val thermal" id="th-count">0</div><div class="stat-lbl">Active</div></div>
+          <div class="stat-card"><div class="stat-val thermal" id="th-avg">-</div><div class="stat-lbl">Avg m/s</div></div>
+          <div class="stat-card"><div class="stat-val thermal" id="th-max">-</div><div class="stat-lbl">Max m/s</div></div>
+        </div>
+        <div class="legend-bar"></div>
+        <div class="legend-labels"><span>1.0</span><span>2.0</span><span>3.0</span><span>4.0+ m/s</span></div>
+      </div>
+
+      <!-- Wind Rose -->
+      <div class="panel-section">
+        <h3><span class="dot" style="background:linear-gradient(135deg,#48B0C7,#0078FF)"></span> Wind Rose</h3>
+        <canvas id="wind-rose-canvas" width="182" height="182"></canvas>
+        <div class="wr-legend">
+          <div class="wr-legend-item"><div class="wr-dot" style="background:#48B0C7"></div>0-5</div>
+          <div class="wr-legend-item"><div class="wr-dot" style="background:#3288D0"></div>5-15</div>
+          <div class="wr-legend-item"><div class="wr-dot" style="background:#1E60E0"></div>15-25</div>
+          <div class="wr-legend-item"><div class="wr-dot" style="background:#FF4444"></div>25+ km/h</div>
+        </div>
+        <div class="stat-row" style="margin-top:8px">
+          <div class="stat-card"><div class="stat-val wind" id="wr-avg">-</div><div class="stat-lbl">Avg km/h</div></div>
+          <div class="stat-card"><div class="stat-val wind" id="wr-max">-</div><div class="stat-lbl">Max km/h</div></div>
+          <div class="stat-card"><div class="stat-val wind" id="wr-dom">-</div><div class="stat-lbl">Dominant</div></div>
+        </div>
+      </div>
+
+      <!-- Altitude Profile (solo mode) -->
+      <div class="panel-section" id="alt-profile-wrap">
+        <h3><span class="dot" style="background:#34c759"></span> Altitude Profile</h3>
+        <canvas id="alt-profile-canvas"></canvas>
+      </div>
+    </calcite-panel>
+  </calcite-shell-panel>
+
+  <!-- ═══════════ RIGHT PANEL: ATHLETES ═══════════ -->
+  <calcite-shell-panel slot="panel-end" id="panel-end" display-mode="overlay" collapsed>
+    <calcite-panel heading="Athletes" closable id="athletes-panel">
+      <calcite-button id="show-all-btn" slot="header-actions-end" appearance="outline-fill" kind="danger" scale="s" style="display:none">Show All</calcite-button>
+      <calcite-list id="athlete-list" selection-mode="none"></calcite-list>
+    </calcite-panel>
+  </calcite-shell-panel>
+
+  <!-- ═══════════ MAP ═══════════ -->
+  <div id="viewDiv"></div>
+
+  <!-- ═══════════ FOOTER: TIME CONTROLS ═══════════ -->
+  <div slot="footer">
+    <div class="time-footer">
+      <div class="time-top">
+        <div>
+          <span class="time-day">Day <span class="dn" id="t-day">1</span></span>
+          <span class="time-date" id="t-date"></span>
+        </div>
+        <span class="time-clock" id="t-clock">00:00</span>
+      </div>
+      <div class="time-mid">
+        <calcite-button id="play-btn" icon-start="play" appearance="solid" kind="brand" scale="s" round></calcite-button>
+        <calcite-slider id="time-slider" min="0" max="1000" value="0" step="1" label-handles></calcite-slider>
+        <div class="speed-group">
+          <calcite-button class="spd-btn" data-speed="1800" appearance="outline" kind="neutral" scale="s">0.5x</calcite-button>
+          <calcite-button class="spd-btn active" data-speed="3600" appearance="solid" kind="neutral" scale="s">1x</calcite-button>
+          <calcite-button class="spd-btn" data-speed="14400" appearance="outline" kind="neutral" scale="s">4x</calcite-button>
+          <calcite-button class="spd-btn" data-speed="43200" appearance="outline" kind="neutral" scale="s">12x</calcite-button>
+        </div>
+      </div>
+      <div class="time-stats">
+        <span>Thermals: <b id="stat-thermals">0</b></span>
+        <span>Wind: <b id="stat-wind">0</b></span>
+        <span>Active: <b id="stat-active">0</b></span>
+      </div>
+    </div>
+  </div>
+
+</calcite-shell>
+
+<!-- ═══════════ LOADING OVERLAY ═══════════ -->
+<div id="loading-overlay">
   <h1><span>RED BULL</span> X-ALPS 2025</h1>
-  <span class="subtitle">3D Race Replay &amp; Thermal Analysis</span>
+  <calcite-loader label="Loading race data" type="indeterminate"></calcite-loader>
+  <span id="load-status" style="font-size:13px;color:#666">Loading race data...</span>
 </div>
 
-<button class="help-btn" id="help-btn" title="Show guide">?</button>
-
-<div id="layer-toggles">
-  <h2>Layers</h2>
-  <label class="toggle-row"><input type="checkbox" id="toggle-tracks" checked> Tracks</label>
-  <label class="toggle-row"><input type="checkbox" id="toggle-thermals" checked> <span class="thermal-icon"></span> Thermals</label>
-  <label class="toggle-row"><input type="checkbox" id="toggle-wind"> <span class="wind-icon"></span> Wind</label>
-  <label class="toggle-row"><input type="checkbox" id="toggle-markers" checked> Athletes</label>
-</div>
-
-<div id="sidebar">
-  <div id="sidebar-header"><h2>Athletes</h2><button class="show-all-btn" id="show-all-btn">Show All</button></div>
-  <div id="athlete-list"></div>
-</div>
-
-<div id="time-panel">
-  <div id="time-display">
-    <div><span id="time-day">Day <span class="day-num">1</span></span> <span id="time-date"></span></div>
-    <div id="time-clock">00:00</div>
-  </div>
-  <div id="slider-row">
-    <button class="btn" id="play-btn" title="Play/Pause">&#9654;</button>
-    <input type="range" id="time-slider" min="0" max="1000" value="0">
-    <div class="speed-btns">
-      <button class="btn speed-btn" data-speed="1800">0.5h/s</button>
-      <button class="btn speed-btn active" data-speed="3600">1h/s</button>
-      <button class="btn speed-btn" data-speed="14400">4h/s</button>
-      <button class="btn speed-btn" data-speed="43200">12h/s</button>
-    </div>
-  </div>
-  <div id="stats-bar">
-    <span id="solo-indicator" style="color:#DB0A40;font-weight:700;display:none">SOLO: Athlete #<b id="solo-id"></b></span>
-    <span>Thermals: <b id="stat-thermals">0</b></span>
-    <span>Wind: <b id="stat-wind">0</b></span>
-    <span>Active: <b id="stat-active">0</b></span>
-  </div>
-</div>
-
-<div id="analysis-panel">
-  <!-- THERMAL SECTION -->
-  <div class="ap-section">
-    <div class="ap-title"><div class="ap-title-dot" style="background:linear-gradient(135deg,#FFD700,#FF4500)"></div> Thermals</div>
-    <div class="thermal-stats">
-      <div class="thermal-stat"><div class="val" id="th-count">0</div><div class="lbl">Active</div></div>
-      <div class="thermal-stat"><div class="val" id="th-avg">-</div><div class="lbl">Avg m/s</div></div>
-      <div class="thermal-stat"><div class="val" id="th-max">-</div><div class="lbl">Max m/s</div></div>
-    </div>
-    <div class="legend-bar"></div>
-    <div class="legend-labels"><span>1.0</span><span>2.0</span><span>3.0</span><span>4.0+</span></div>
-    <div class="ap-hint">3D cylinders on map = thermal lift locations</div>
-  </div>
-
-  <!-- WIND ROSE SECTION -->
-  <div class="ap-section">
-    <div class="ap-title"><div class="ap-title-dot" style="background:linear-gradient(135deg,#48B0C7,#0078FF)"></div> Wind Rose</div>
-    <div id="wind-rose-wrap">
-      <canvas id="wind-rose-canvas" width="182" height="182"></canvas>
-    </div>
-    <div class="wr-speed-legend">
-      <div class="wr-speed-item"><div class="wr-speed-dot" style="background:#48B0C7"></div> 0-5</div>
-      <div class="wr-speed-item"><div class="wr-speed-dot" style="background:#3288D0"></div> 5-15</div>
-      <div class="wr-speed-item"><div class="wr-speed-dot" style="background:#1E60E0"></div> 15-25</div>
-      <div class="wr-speed-item"><div class="wr-speed-dot" style="background:#FF4444"></div> 25+ km/h</div>
-    </div>
-    <div class="wr-stats">
-      <div class="wr-stat"><div class="val" id="wr-avg">-</div><div class="lbl">Avg km/h</div></div>
-      <div class="wr-stat"><div class="val" id="wr-max">-</div><div class="lbl">Max km/h</div></div>
-      <div class="wr-stat"><div class="val" id="wr-dom">-</div><div class="lbl">Dominant</div></div>
-    </div>
-    <div class="ap-hint">3D cones on map = wind direction &amp; speed</div>
-  </div>
-</div>
-
-<div id="loading">
-  <h1><span>RED BULL</span> X-ALPS 2025</h1>
-  <div class="spinner"></div>
-  <div id="load-status">Loading race data...</div>
-</div>
-
-<script src="https://js.arcgis.com/4.30/"></script>
 <script>
-// ============================================================
-// LOGIN
-// ============================================================
-(function() {
-  const loginScreen = document.getElementById("login-screen");
-  const loginBtn = document.getElementById("login-btn");
-  const loginUser = document.getElementById("login-user");
-  const loginPass = document.getElementById("login-pass");
-  const loginError = document.getElementById("login-error");
-  const introOverlay = document.getElementById("intro-overlay");
-
-  function attemptLogin() {
-    const user = loginUser.value.trim();
-    const pass = loginPass.value;
-    if (user === "portaladmin" && pass === "portaladmin") {
-      loginScreen.style.transition = "opacity 0.5s";
-      loginScreen.style.opacity = "0";
-      setTimeout(() => {
-        loginScreen.style.display = "none";
-        introOverlay.classList.add("visible");
-      }, 500);
-    } else {
-      loginError.textContent = "Invalid credentials. Please try again.";
-      loginPass.value = "";
-      loginPass.focus();
-    }
-  }
-
-  loginBtn.addEventListener("click", attemptLogin);
-  loginPass.addEventListener("keydown", e => { if (e.key === "Enter") attemptLogin(); });
-  loginUser.addEventListener("keydown", e => { if (e.key === "Enter") loginPass.focus(); });
-})();
-
-// ============================================================
-// INTRO MODAL
-// ============================================================
-(function() {
-  const introOverlay = document.getElementById("intro-overlay");
-  const startBtn = document.getElementById("intro-start-btn");
-  const helpBtn = document.getElementById("help-btn");
-
-  startBtn.addEventListener("click", () => {
-    introOverlay.classList.remove("visible");
-    initApp();
-  });
-
-  helpBtn.addEventListener("click", () => {
-    introOverlay.classList.add("visible");
-  });
-
-  // Close on backdrop click
-  introOverlay.addEventListener("click", e => {
-    if (e.target === introOverlay) {
-      introOverlay.classList.remove("visible");
-    }
-  });
-})();
-
-// ============================================================
-// MAIN APPLICATION (deferred until after intro)
-// ============================================================
-let appInitialized = false;
-
-function initApp() {
-  if (appInitialized) return;
-  appInitialized = true;
-
+// ================================================================
+// CONFIG
+// ================================================================
 const ARCGIS_API_KEY = "";
 const DATA_URL = "data/race_data.json";
 const THERMAL_WINDOW = 3600;
 const WIND_WINDOW = 5400;
-const RACE_START_DATE = new Date("2025-06-12T00:00:00Z");
+const RACE_START = new Date("2025-06-12T00:00:00Z");
+const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const ACT = { 0:"Stationary", 1:"Flying", 2:"Hiking", "-1":"Unknown" };
+const COLORS = [
+  [255,59,48],[255,149,0],[255,204,0],[52,199,89],[0,199,190],[48,176,199],
+  [50,173,230],[0,122,255],[88,86,214],[175,82,222],[255,45,85],[162,132,94],
+  [0,255,163],[255,55,95],[100,210,255],[255,214,10],[76,217,100],[90,200,250],
+  [255,150,50],[180,100,255],[255,105,180],[0,250,154],[255,165,0],[138,43,226],
+  [0,206,209],[255,99,71],[144,238,144],[255,182,193],[64,224,208],[218,165,32],
+  [147,112,219],[255,127,80],[102,205,170],[240,128,128],[100,149,237]
+];
+
+// ================================================================
+// LOGIN
+// ================================================================
+const loginModal = document.getElementById("login-modal");
+const introModal = document.getElementById("intro-modal");
+const loginBtn = document.getElementById("login-btn");
+const loginUser = document.getElementById("login-user");
+const loginPass = document.getElementById("login-pass");
+const loginError = document.getElementById("login-error");
+
+function tryLogin() {
+  if (loginUser.value.trim() === "portaladmin" && loginPass.value === "portaladmin") {
+    loginModal.open = false;
+    introModal.open = true;
+  } else {
+    loginError.textContent = "Invalid credentials.";
+    loginPass.value = "";
+  }
+}
+loginBtn.addEventListener("click", tryLogin);
+loginPass.addEventListener("keydown", e => { if (e.key === "Enter") tryLogin(); });
+loginUser.addEventListener("keydown", e => { if (e.key === "Enter") loginPass.setFocus(); });
+
+// ================================================================
+// INTRO & PANEL TOGGLES
+// ================================================================
+let appInit = false;
+document.getElementById("intro-start-btn").addEventListener("click", () => { introModal.open = false; initApp(); });
+document.getElementById("btn-help").addEventListener("click", () => { introModal.open = true; });
+
+const panelStart = document.getElementById("panel-start");
+const panelEnd = document.getElementById("panel-end");
+document.getElementById("btn-analysis").addEventListener("click", () => { panelStart.collapsed = !panelStart.collapsed; });
+document.getElementById("btn-athletes").addEventListener("click", () => { panelEnd.collapsed = !panelEnd.collapsed; });
+document.getElementById("analysis-panel").addEventListener("calcitePanelClose", () => { panelStart.collapsed = true; });
+document.getElementById("athletes-panel").addEventListener("calcitePanelClose", () => { panelEnd.collapsed = true; });
+
+// ================================================================
+// MAIN APP
+// ================================================================
+function initApp() {
+  if (appInit) return;
+  appInit = true;
 
 require([
-  "esri/config",
-  "esri/Map",
-  "esri/views/SceneView",
-  "esri/layers/GraphicsLayer",
-  "esri/Graphic",
-  "esri/geometry/Polyline",
-  "esri/geometry/Point",
-  "esri/symbols/LineSymbol3D",
-  "esri/symbols/LineSymbol3DLayer",
-  "esri/symbols/PointSymbol3D",
-  "esri/symbols/ObjectSymbol3DLayer",
-  "esri/symbols/IconSymbol3DLayer"
-], function(esriConfig, Map, SceneView, GraphicsLayer, Graphic, Polyline, Point,
-            LineSymbol3D, LineSymbol3DLayer, PointSymbol3D, ObjectSymbol3DLayer, IconSymbol3DLayer) {
+  "esri/config","esri/Map","esri/views/SceneView","esri/layers/GraphicsLayer",
+  "esri/Graphic","esri/geometry/Polyline","esri/geometry/Point",
+  "esri/symbols/LineSymbol3D","esri/symbols/LineSymbol3DLayer",
+  "esri/symbols/PointSymbol3D","esri/symbols/ObjectSymbol3DLayer","esri/symbols/IconSymbol3DLayer"
+], function(esriConfig,Map,SceneView,GraphicsLayer,Graphic,Polyline,Point,
+            LineSymbol3D,LineSymbol3DLayer,PointSymbol3D,ObjectSymbol3DLayer,IconSymbol3DLayer) {
 
   if (ARCGIS_API_KEY) esriConfig.apiKey = ARCGIS_API_KEY;
 
-  const trackLayer = new GraphicsLayer({ title: "Tracks", elevationInfo: { mode: "absolute-height" } });
-  const thermalLayer = new GraphicsLayer({ title: "Thermals", elevationInfo: { mode: "absolute-height" } });
-  const windLayer = new GraphicsLayer({ title: "Wind", elevationInfo: { mode: "absolute-height" }, visible: false });
-  const markerLayer = new GraphicsLayer({ title: "Athletes", elevationInfo: { mode: "absolute-height" } });
+  // -- Layers --
+  const trackLayer = new GraphicsLayer({ title:"Tracks", elevationInfo:{mode:"absolute-height"} });
+  const thermalLayer = new GraphicsLayer({ title:"Thermals", elevationInfo:{mode:"absolute-height"} });
+  const windLayer = new GraphicsLayer({ title:"Wind", elevationInfo:{mode:"absolute-height"}, visible:false });
+  const markerLayer = new GraphicsLayer({ title:"Athletes", elevationInfo:{mode:"absolute-height"} });
 
-  const map = new Map({
-    basemap: "satellite",
-    ground: "world-elevation",
-    layers: [trackLayer, thermalLayer, windLayer, markerLayer]
-  });
+  const map = new Map({ basemap:"satellite", ground:"world-elevation", layers:[trackLayer,thermalLayer,windLayer,markerLayer] });
 
   const view = new SceneView({
-    container: "viewDiv",
-    map: map,
-    qualityProfile: "high",
-    camera: {
-      position: { longitude: 10.2, latitude: 45.0, z: 180000 },
-      tilt: 55, heading: 25
-    },
+    container:"viewDiv", map, qualityProfile:"high",
+    camera: { position:{longitude:10.2,latitude:45.0,z:180000}, tilt:55, heading:25 },
     environment: {
-      atmosphere: { quality: "high" },
-      lighting: {
-        type: "sun",
-        date: new Date("2025-06-15T10:00:00Z"),
-        directShadowsEnabled: true,
-        ambientOcclusionEnabled: true
-      },
-      starsEnabled: false
+      atmosphere:{quality:"high"},
+      lighting:{type:"sun",date:new Date("2025-06-15T10:00:00Z"),directShadowsEnabled:true,ambientOcclusionEnabled:true},
+      starsEnabled:false
     },
-    popup: { dockEnabled: true, dockOptions: { position: "top-right", breakpoint: false } },
-    ui: { components: ["zoom", "compass", "navigation-toggle"] }
+    popup:{dockEnabled:true,dockOptions:{position:"top-right",breakpoint:false}},
+    ui:{components:["zoom","compass","navigation-toggle"]}
   });
 
-  let raceData = null;
-  let minTs = 0, maxTs = 0;
-  const markers = {};
-  const trackGraphics = {};
-  const athleteVisible = {};
-  let currentTime = 0;
-  let isPlaying = false;
-  let playSpeed = 3600;
-  let lastFrameMs = 0;
-  let thermalsSorted = [];
-  let windSorted = [];
-  let soloAthlete = null;  // null = show all, "5" = solo on athlete 5
+  // -- State --
+  let raceData=null, minTs=0, maxTs=0, currentTime=0;
+  let isPlaying=false, playSpeed=3600, lastFrameMs=0;
+  let soloAthlete=null, lastThUpdate=0, lastWdUpdate=0;
+  const markers={}, trackGfx={}, athVis={};
+  let thermals=[], wind=[];
 
+  // -- DOM refs --
   const statusEl = document.getElementById("load-status");
+  const loadingEl = document.getElementById("loading-overlay");
+  const slider = document.getElementById("time-slider");
+  const playBtn = document.getElementById("play-btn");
+  const soloChip = document.getElementById("solo-chip");
+  const soloChipId = document.getElementById("solo-chip-id");
+  const showAllBtn = document.getElementById("show-all-btn");
 
+  // ================================================================
+  // LOAD DATA
+  // ================================================================
   fetch(DATA_URL)
-    .then(r => { statusEl.textContent = "Parsing JSON..."; return r.json(); })
+    .then(r => { statusEl.textContent = "Parsing..."; return r.json(); })
     .then(data => {
       raceData = data;
-      minTs = data.meta.min_ts;
-      maxTs = data.meta.max_ts;
-      currentTime = minTs;
-      thermalsSorted = data.thermals;
-      windSorted = data.wind;
+      minTs = data.meta.min_ts; maxTs = data.meta.max_ts;
+      currentTime = minTs; thermals = data.thermals; wind = data.wind;
 
-      statusEl.textContent = "Building 3D tracks...";
+      // Map slider range to timestamps
+      slider.min = minTs; slider.max = maxTs; slider.value = minTs; slider.step = 60;
+      slider.minLabel = "Start"; slider.maxLabel = "End";
+
+      statusEl.textContent = "Building 3D...";
       requestAnimationFrame(() => {
-        buildTracks();
-        buildMarkers();
-        buildSidebar();
-        setupTimeControls();
-        updatePositions(currentTime);
-        updateThermals(currentTime);
-        document.getElementById("loading").classList.add("done");
-        document.getElementById("analysis-panel").style.display = "block";
+        buildTracks(); buildMarkers(); buildSidebar();
+        setupControls(); updatePositions(currentTime); updateThermals(currentTime,true);
+        loadingEl.classList.add("done");
       });
     })
-    .catch(err => { statusEl.textContent = "Error: " + err.message; console.error(err); });
+    .catch(err => { statusEl.textContent = "Error: " + err.message; });
 
+  // ================================================================
+  // BUILD TRACKS
+  // ================================================================
   function buildTracks() {
-    const aids = Object.keys(raceData.tracks).sort((a,b) => +a - +b);
-    for (const aid of aids) {
-      const t = raceData.tracks[aid];
-      const pts = t.points;
+    for (const aid of Object.keys(raceData.tracks).sort((a,b)=>+a-+b)) {
+      const t = raceData.tracks[aid], pts = t.points;
       if (pts.length < 2) continue;
-      athleteVisible[aid] = true;
-      const [r, g, b] = t.color;
-      const path = pts.map(p => [p[0], p[1], p[2]]);
-      const graphic = new Graphic({
-        geometry: new Polyline({ paths: [path], spatialReference: { wkid: 4326 }, hasZ: true }),
-        symbol: new LineSymbol3D({
-          symbolLayers: [
-            new LineSymbol3DLayer({ material: { color: [r, g, b, 0.15] }, size: 5 }),
-            new LineSymbol3DLayer({ material: { color: [r, g, b, 0.7] }, size: 1.5 })
-          ]
-        }),
-        attributes: { aid: aid }
+      athVis[aid] = true;
+      const [r,g,b] = t.color;
+      const gfx = new Graphic({
+        geometry: new Polyline({ paths:[pts.map(p=>[p[0],p[1],p[2]])], spatialReference:{wkid:4326}, hasZ:true }),
+        symbol: new LineSymbol3D({ symbolLayers:[
+          new LineSymbol3DLayer({material:{color:[r,g,b,0.15]},size:5}),
+          new LineSymbol3DLayer({material:{color:[r,g,b,0.7]},size:1.5})
+        ]}),
+        attributes:{aid}
       });
-      trackLayer.add(graphic);
-      trackGraphics[aid] = graphic;
+      trackLayer.add(gfx); trackGfx[aid] = gfx;
     }
   }
 
+  // ================================================================
+  // BUILD MARKERS
+  // ================================================================
   function buildMarkers() {
-    const aids = Object.keys(raceData.tracks).sort((a,b) => +a - +b);
-    for (const aid of aids) {
+    for (const aid of Object.keys(raceData.tracks).sort((a,b)=>+a-+b)) {
       const t = raceData.tracks[aid];
       if (t.points.length < 2) continue;
-      const [r, g, b] = t.color;
-      const p = t.points[0];
-      const graphic = new Graphic({
-        geometry: new Point({ longitude: p[0], latitude: p[1], z: p[2], spatialReference: { wkid: 4326 } }),
-        symbol: new PointSymbol3D({
-          symbolLayers: [
-            new IconSymbol3DLayer({
-              resource: { primitive: "circle" },
-              material: { color: [r, g, b] },
-              outline: { color: [255, 255, 255, 0.9], size: 2 },
-              size: 14
-            })
-          ],
-          verticalOffset: { screenLength: 20, maxWorldLength: 5000, minWorldLength: 50 },
-          callout: { type: "line", size: 1, color: [255, 255, 255, 0.4] }
+      const [r,g,b] = t.color, p = t.points[0];
+      const gfx = new Graphic({
+        geometry: new Point({longitude:p[0],latitude:p[1],z:p[2],spatialReference:{wkid:4326}}),
+        symbol: new PointSymbol3D({ symbolLayers:[
+          new IconSymbol3DLayer({resource:{primitive:"circle"},material:{color:[r,g,b]},outline:{color:[255,255,255,0.9],size:2},size:14})
+        ],
+          verticalOffset:{screenLength:20,maxWorldLength:5000,minWorldLength:50},
+          callout:{type:"line",size:1,color:[255,255,255,0.4]}
         }),
-        attributes: { aid: aid, name: "Athlete #" + aid },
-        popupTemplate: {
-          title: "Athlete #{aid}",
-          content: [{ type: "fields", fieldInfos: [
-            { fieldName: "alt", label: "Altitude (m)" },
-            { fieldName: "activity", label: "Activity" },
-            { fieldName: "time", label: "Time (UTC)" }
-          ]}]
-        },
-        visible: false
+        attributes:{aid,name:"Athlete #"+aid},
+        popupTemplate:{title:"Athlete #{aid}",content:[{type:"fields",fieldInfos:[
+          {fieldName:"alt",label:"Altitude (m)"},{fieldName:"activity",label:"Activity"},{fieldName:"time",label:"Time (UTC)"}
+        ]}]},
+        visible:false
       });
-      markerLayer.add(graphic);
-      markers[aid] = graphic;
+      markerLayer.add(gfx); markers[aid] = gfx;
     }
   }
 
-  const ACT_NAMES = { 0: "Stationary", 1: "Flying", 2: "Hiking", "-1": "Unknown" };
-
-  function degToCompass(deg) {
-    const dirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
-    return dirs[Math.round(deg / 22.5) % 16];
-  }
-
-  // ============================================================
-  // WIND ROSE CHART
-  // ============================================================
-  function drawWindRose(windData) {
-    const canvas = document.getElementById("wind-rose-canvas");
-    const ctx = canvas.getContext("2d");
-    const dpr = window.devicePixelRatio || 1;
-    const size = 182;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    canvas.style.width = size + "px";
-    canvas.style.height = size + "px";
-    ctx.scale(dpr, dpr);
-
-    const cx = size / 2, cy = size / 2, maxR = 68;
-
-    ctx.clearRect(0, 0, size, size);
-
-    // 16 direction bins x 4 speed bins
-    const nDirs = 16;
-    const speedEdges = [0, 5, 15, 25, 200];
-    const speedColors = ["rgba(72,176,199,0.85)", "rgba(50,136,208,0.85)", "rgba(30,96,224,0.85)", "rgba(255,68,68,0.85)"];
-    const bins = Array.from({length: nDirs}, () => [0, 0, 0, 0]);
-    let total = 0, sumSpeed = 0, maxSpeed = 0;
-    const dirTotals = new Array(nDirs).fill(0);
-
-    for (const w of windData) {
-      const wd = w[4], ws = w[3];
-      const di = Math.round(wd / 22.5) % nDirs;
-      for (let si = 0; si < 4; si++) {
-        if (ws >= speedEdges[si] && ws < speedEdges[si + 1]) { bins[di][si]++; break; }
-      }
-      dirTotals[di]++;
-      sumSpeed += ws;
-      if (ws > maxSpeed) maxSpeed = ws;
-      total++;
-    }
-
-    // No data state
-    if (total === 0) {
-      ctx.fillStyle = "#444";
-      ctx.font = "11px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("No wind data in", cx, cy - 6);
-      ctx.fillText("current time window", cx, cy + 10);
-      document.getElementById("wr-avg").textContent = "-";
-      document.getElementById("wr-max").textContent = "-";
-      document.getElementById("wr-dom").textContent = "-";
-      return;
-    }
-
-    const maxDirTotal = Math.max(1, ...dirTotals);
-
-    // Grid circles
-    ctx.lineWidth = 0.5;
-    for (let pct = 25; pct <= 100; pct += 25) {
-      ctx.strokeStyle = "rgba(255,255,255,0.07)";
-      ctx.beginPath();
-      ctx.arc(cx, cy, maxR * pct / 100, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Grid spokes
-    ctx.strokeStyle = "rgba(255,255,255,0.04)";
-    for (let i = 0; i < 16; i++) {
-      const a = i * Math.PI * 2 / 16 - Math.PI / 2;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(cx + maxR * Math.cos(a), cy + maxR * Math.sin(a));
-      ctx.stroke();
-    }
-
-    // Draw stacked wedges
-    const wedgeHalf = Math.PI / nDirs * 0.75;
-    for (let di = 0; di < nDirs; di++) {
-      const centerAngle = di * Math.PI * 2 / nDirs - Math.PI / 2;
-      let cumR = 0;
-      for (let si = 0; si < 4; si++) {
-        if (bins[di][si] === 0) continue;
-        const barR = (bins[di][si] / maxDirTotal) * maxR;
-        const inner = cumR, outer = cumR + barR;
-
-        ctx.fillStyle = speedColors[si];
-        ctx.beginPath();
-        ctx.arc(cx, cy, outer, centerAngle - wedgeHalf, centerAngle + wedgeHalf);
-        ctx.arc(cx, cy, inner, centerAngle + wedgeHalf, centerAngle - wedgeHalf, true);
-        ctx.closePath();
-        ctx.fill();
-        cumR = outer;
-      }
-    }
-
-    // Direction labels
-    const labels8 = ["N","NE","E","SE","S","SW","W","NW"];
-    ctx.fillStyle = "#aaa";
-    ctx.font = "bold 9px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    for (let i = 0; i < 8; i++) {
-      const a = i * Math.PI / 4 - Math.PI / 2;
-      const lx = cx + (maxR + 13) * Math.cos(a);
-      const ly = cy + (maxR + 13) * Math.sin(a);
-      ctx.fillStyle = i === 0 ? "#DB0A40" : "#999";
-      ctx.fillText(labels8[i], lx, ly);
-    }
-
-    // Center dot
-    ctx.fillStyle = "rgba(255,255,255,0.15)";
-    ctx.beginPath();
-    ctx.arc(cx, cy, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Update stats
-    const avgSpeed = (sumSpeed / total).toFixed(1);
-    const domDir = dirTotals.indexOf(Math.max(...dirTotals));
-    const compassDirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
-    document.getElementById("wr-avg").textContent = avgSpeed;
-    document.getElementById("wr-max").textContent = maxSpeed.toFixed(0);
-    document.getElementById("wr-dom").textContent = compassDirs[domDir];
-  }
-
-  // ============================================================
-  // UPDATE ANALYSIS PANEL (called from thermal/wind updates)
-  // ============================================================
-  function updateAnalysisPanel(visibleThermals, visibleWind) {
-    // Thermal stats
-    if (visibleThermals && visibleThermals.length > 0) {
-      const count = visibleThermals.length;
-      let sumVs = 0, maxVs = 0;
-      for (const th of visibleThermals) {
-        sumVs += th[3];
-        if (th[3] > maxVs) maxVs = th[3];
-      }
-      document.getElementById("th-count").textContent = count;
-      document.getElementById("th-avg").textContent = (sumVs / count).toFixed(1);
-      document.getElementById("th-max").textContent = maxVs.toFixed(1);
-    } else {
-      document.getElementById("th-count").textContent = "0";
-      document.getElementById("th-avg").textContent = "-";
-      document.getElementById("th-max").textContent = "-";
-    }
-
-    // Wind rose
-    drawWindRose(visibleWind || []);
-  }
-
+  // ================================================================
+  // ANIMATION
+  // ================================================================
   function updatePositions(t) {
-    let activeCount = 0;
+    let active = 0;
     for (const aid of Object.keys(markers)) {
       const pts = raceData.tracks[aid].points;
-      const first = pts[0][3], last = pts[pts.length - 1][3];
-      if (!athleteVisible[aid] || t < first || t > last) {
-        markers[aid].visible = false; continue;
-      }
-      let lo = 0, hi = pts.length - 1;
-      while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pts[mid][3] <= t) lo = mid; else hi = mid - 1; }
-      const p1 = pts[lo], p2 = (lo + 1 < pts.length) ? pts[lo + 1] : p1;
-      const dt = p2[3] - p1[3];
-      const frac = dt > 0 ? Math.min(1, (t - p1[3]) / dt) : 0;
-      const lon = p1[0] + (p2[0] - p1[0]) * frac;
-      const lat = p1[1] + (p2[1] - p1[1]) * frac;
-      const alt = p1[2] + (p2[2] - p1[2]) * frac;
-      markers[aid].geometry = new Point({ longitude: lon, latitude: lat, z: alt, spatialReference: { wkid: 4326 } });
-      markers[aid].attributes = {
-        aid, name: "Athlete #" + aid, alt: Math.round(alt),
-        activity: ACT_NAMES[p1[4]] || "Unknown",
-        time: new Date(t * 1000).toISOString().slice(11, 19)
-      };
-      markers[aid].visible = true;
-      activeCount++;
-      const altEl = document.getElementById("alt-" + aid);
-      if (altEl) altEl.textContent = Math.round(alt) + "m";
+      if (!athVis[aid] || t < pts[0][3] || t > pts[pts.length-1][3]) { markers[aid].visible=false; continue; }
+      let lo=0, hi=pts.length-1;
+      while (lo<hi) { const m=(lo+hi+1)>>1; if(pts[m][3]<=t) lo=m; else hi=m-1; }
+      const p1=pts[lo], p2=lo+1<pts.length?pts[lo+1]:p1;
+      const dt=p2[3]-p1[3], f=dt>0?Math.min(1,(t-p1[3])/dt):0;
+      markers[aid].geometry = new Point({longitude:p1[0]+(p2[0]-p1[0])*f, latitude:p1[1]+(p2[1]-p1[1])*f, z:p1[2]+(p2[2]-p1[2])*f, spatialReference:{wkid:4326}});
+      markers[aid].attributes = {aid, name:"Athlete #"+aid, alt:Math.round(p1[2]+(p2[2]-p1[2])*f), activity:ACT[p1[4]]||"Unknown", time:new Date(t*1000).toISOString().slice(11,19)};
+      markers[aid].visible = true; active++;
     }
-    document.getElementById("stat-active").textContent = activeCount;
+    document.getElementById("stat-active").textContent = active;
+    // Sidebar alt updates via requestIdleCallback
+    if (window.requestIdleCallback) requestIdleCallback(() => updateSidebarAlts(t)); else updateSidebarAlts(t);
   }
 
-  let lastThermalUpdate = 0;
+  function updateSidebarAlts(t) {
+    for (const aid of Object.keys(markers)) {
+      const el = document.getElementById("alt-"+aid);
+      if (!el) continue;
+      if (!markers[aid].visible) { el.textContent = "--"; continue; }
+      el.textContent = markers[aid].attributes.alt + "m";
+    }
+  }
+
+  // ================================================================
+  // THERMALS
+  // ================================================================
   function thermalColor(vs) {
-    if (vs < 1.5) return [255, 215, 0, 0.7];
-    if (vs < 2.5) return [255, 140, 0, 0.75];
-    if (vs < 3.5) return [255, 69, 0, 0.8];
-    return [220, 20, 60, 0.85];
+    if (vs<1.5) return [255,215,0,0.7]; if (vs<2.5) return [255,140,0,0.75];
+    if (vs<3.5) return [255,69,0,0.8]; return [220,20,60,0.85];
   }
 
   function updateThermals(t, force) {
-    if (!force && Math.abs(t - lastThermalUpdate) < THERMAL_WINDOW * 0.1) return;
-    lastThermalUpdate = t;
+    if (!force && Math.abs(t-lastThUpdate) < THERMAL_WINDOW*0.1) return;
+    lastThUpdate = t;
     thermalLayer.removeAll();
-    const startT = t - THERMAL_WINDOW, endT = t + THERMAL_WINDOW;
-    const soloId = soloAthlete ? +soloAthlete : null;
-    let lo = 0, hi = thermalsSorted.length;
-    while (lo < hi) { const mid = (lo + hi) >> 1; if (thermalsSorted[mid][4] < startT) lo = mid + 1; else hi = mid; }
-    let count = 0;
-    const graphics = [];
-    for (let i = lo; i < thermalsSorted.length && thermalsSorted[i][4] <= endT; i++) {
-      const th = thermalsSorted[i];
-      if (soloId !== null && th[5] !== soloId) continue;
-      const vs = th[3], col = thermalColor(vs);
-      const height = Math.max(100, vs * 200), width = Math.max(80, vs * 60);
-      graphics.push(new Graphic({
-        geometry: new Point({ longitude: th[0], latitude: th[1], z: th[2], spatialReference: { wkid: 4326 } }),
-        symbol: new PointSymbol3D({ symbolLayers: [
-          new ObjectSymbol3DLayer({ resource: { primitive: "cylinder" }, material: { color: col }, width, height, depth: width })
-        ]})
+    const s=t-THERMAL_WINDOW, e=t+THERMAL_WINDOW, sid=soloAthlete?+soloAthlete:null;
+    let lo=0,hi=thermals.length;
+    while(lo<hi){const m=(lo+hi)>>1; if(thermals[m][4]<s) lo=m+1; else hi=m;}
+    let cnt=0; const gfx=[];
+    const visTh=[], visWd=[];
+    for(let i=lo;i<thermals.length&&thermals[i][4]<=e;i++){
+      const th=thermals[i];
+      if(sid!==null&&th[5]!==sid) continue;
+      visTh.push(th);
+      const vs=th[3],col=thermalColor(vs),h=Math.max(100,vs*200),w=Math.max(80,vs*60);
+      gfx.push(new Graphic({
+        geometry:new Point({longitude:th[0],latitude:th[1],z:th[2],spatialReference:{wkid:4326}}),
+        symbol:new PointSymbol3D({symbolLayers:[new ObjectSymbol3DLayer({resource:{primitive:"cylinder"},material:{color:col},width:w,height:h,depth:w})]})
       }));
-      count++;
-      if (count > 4000) break;
+      cnt++; if(cnt>4000) break;
     }
-    thermalLayer.addMany(graphics);
-    document.getElementById("stat-thermals").textContent = count;
+    thermalLayer.addMany(gfx);
+    document.getElementById("stat-thermals").textContent = cnt;
 
-    // Collect visible thermals for analysis panel
-    const visThermals = [];
-    for (let i = lo; i < thermalsSorted.length && thermalsSorted[i][4] <= endT; i++) {
-      const th = thermalsSorted[i];
-      if (soloId !== null && th[5] !== soloId) continue;
-      visThermals.push(th);
+    // Wind data for analysis panel (same time sync)
+    const ws=t-WIND_WINDOW, we=t+WIND_WINDOW;
+    let wlo=0,whi=wind.length;
+    while(wlo<whi){const m=(wlo+whi)>>1;if(wind[m][5]<ws)wlo=m+1;else whi=m;}
+    for(let i=wlo;i<wind.length&&wind[i][5]<=we;i++){
+      const w=wind[i]; if(sid!==null&&w[6]!==sid) continue; visWd.push(w);
     }
-    // Collect visible wind for wind rose (use same time window)
-    const visWind = [];
-    const wStartT = t - WIND_WINDOW, wEndT = t + WIND_WINDOW;
-    let wlo = 0, whi = windSorted.length;
-    while (wlo < whi) { const mid = (wlo + whi) >> 1; if (windSorted[mid][5] < wStartT) wlo = mid + 1; else whi = mid; }
-    for (let i = wlo; i < windSorted.length && windSorted[i][5] <= wEndT; i++) {
-      const w = windSorted[i];
-      if (soloId !== null && w[6] !== soloId) continue;
-      visWind.push(w);
-    }
-    updateAnalysisPanel(visThermals, visWind);
+    updateAnalysis(visTh,visWd);
   }
 
-  let lastWindUpdate = 0;
-  function updateWind(t, force) {
-    if (!force && Math.abs(t - lastWindUpdate) < WIND_WINDOW * 0.15) return;
-    lastWindUpdate = t;
-    windLayer.removeAll();
-    if (!windLayer.visible) return;
-    const startT = t - WIND_WINDOW, endT = t + WIND_WINDOW;
-    const soloId = soloAthlete ? +soloAthlete : null;
-    let lo = 0, hi = windSorted.length;
-    while (lo < hi) { const mid = (lo + hi) >> 1; if (windSorted[mid][5] < startT) lo = mid + 1; else hi = mid; }
-    let count = 0;
-    const graphics = [];
-    for (let i = lo; i < windSorted.length && windSorted[i][5] <= endT; i++) {
-      const w = windSorted[i];
-      if (soloId !== null && w[6] !== soloId) continue;
-      const ws = w[3], wd = w[4]; // speed km/h, direction degrees
-      const intensity = Math.min(1, ws / 40);
-      const r = Math.round(72 + intensity * 183), g = Math.round(176 - intensity * 136), b = Math.round(199 - intensity * 55);
-      const arrowLen = Math.max(150, ws * 15);
-
-      // Cone pointing in wind direction (heading = where wind comes FROM, so arrow = wd)
-      graphics.push(new Graphic({
-        geometry: new Point({ longitude: w[0], latitude: w[1], z: w[2], spatialReference: { wkid: 4326 } }),
-        symbol: new PointSymbol3D({ symbolLayers: [
-          new ObjectSymbol3DLayer({
-            resource: { primitive: "cone" },
-            material: { color: [r, g, b, 0.75] },
-            width: Math.max(60, ws * 3),
-            height: arrowLen,
-            depth: Math.max(60, ws * 3),
-            heading: wd,  // rotate to wind direction
-            tilt: 90      // lay flat to point horizontally
-          })
+  // ================================================================
+  // WIND
+  // ================================================================
+  function updateWind(t,force) {
+    if(!force&&Math.abs(t-lastWdUpdate)<WIND_WINDOW*0.15) return;
+    lastWdUpdate=t; windLayer.removeAll(); if(!windLayer.visible) return;
+    const s=t-WIND_WINDOW,e=t+WIND_WINDOW,sid=soloAthlete?+soloAthlete:null;
+    let lo=0,hi=wind.length;
+    while(lo<hi){const m=(lo+hi)>>1;if(wind[m][5]<s)lo=m+1;else hi=m;}
+    let cnt=0;const gfx=[];
+    for(let i=lo;i<wind.length&&wind[i][5]<=e;i++){
+      const w=wind[i]; if(sid!==null&&w[6]!==sid) continue;
+      const ws=w[3],wd=w[4],int=Math.min(1,ws/40);
+      const r=Math.round(72+int*183),g=Math.round(176-int*136),b=Math.round(199-int*55);
+      gfx.push(new Graphic({
+        geometry:new Point({longitude:w[0],latitude:w[1],z:w[2],spatialReference:{wkid:4326}}),
+        symbol:new PointSymbol3D({symbolLayers:[
+          new ObjectSymbol3DLayer({resource:{primitive:"cone"},material:{color:[r,g,b,0.75]},width:Math.max(60,ws*3),height:Math.max(150,ws*15),depth:Math.max(60,ws*3),heading:wd,tilt:90})
         ]}),
-        popupTemplate: {
-          title: "Wind Observation",
-          content: `<b>Speed:</b> ${ws} km/h<br><b>From:</b> ${wd}&deg; (${degToCompass(wd)})<br><b>Altitude:</b> ${w[2]} m`
-        }
+        popupTemplate:{title:"Wind",content:`<b>${ws}</b> km/h from <b>${wd}&deg; (${COMPASS[Math.round(wd/22.5)%16]})</b><br>Alt: ${w[2]}m`}
       }));
-      count++;
-      if (count > 3000) break;
+      cnt++; if(cnt>3000) break;
     }
-    windLayer.addMany(graphics);
-    document.getElementById("stat-wind").textContent = count;
+    windLayer.addMany(gfx);
+    document.getElementById("stat-wind").textContent = cnt;
   }
 
-  function setupTimeControls() {
-    const slider = document.getElementById("time-slider");
-    const playBtn = document.getElementById("play-btn");
-    slider.min = minTs; slider.max = maxTs; slider.value = minTs; slider.step = 60;
+  // ================================================================
+  // ANALYSIS PANEL: STATS + WIND ROSE + ALT PROFILE
+  // ================================================================
+  function updateAnalysis(visTh, visWd) {
+    // Thermal stats
+    if (visTh.length) {
+      let s=0,mx=0; for(const t of visTh){s+=t[3];if(t[3]>mx)mx=t[3];}
+      document.getElementById("th-count").textContent = visTh.length;
+      document.getElementById("th-avg").textContent = (s/visTh.length).toFixed(1);
+      document.getElementById("th-max").textContent = mx.toFixed(1);
+    } else {
+      document.getElementById("th-count").textContent="0";
+      document.getElementById("th-avg").textContent="-";
+      document.getElementById("th-max").textContent="-";
+    }
+    drawWindRose(visWd);
+    if (soloAthlete) drawAltProfile(soloAthlete, currentTime);
+  }
 
-    slider.addEventListener("input", () => {
-      currentTime = +slider.value;
-      updateAll();
-    });
+  function drawWindRose(data) {
+    const c=document.getElementById("wind-rose-canvas"),ctx=c.getContext("2d");
+    const dpr=window.devicePixelRatio||1, sz=182;
+    c.width=sz*dpr;c.height=sz*dpr;c.style.width=sz+"px";c.style.height=sz+"px";
+    ctx.scale(dpr,dpr);
+    const cx=sz/2,cy=sz/2,mR=68;
+    ctx.clearRect(0,0,sz,sz);
+
+    const nD=16, sE=[0,5,15,25,200], sC=["rgba(72,176,199,.85)","rgba(50,136,208,.85)","rgba(30,96,224,.85)","rgba(255,68,68,.85)"];
+    const bins=Array.from({length:nD},()=>[0,0,0,0]);
+    let tot=0,sSum=0,sMx=0;const dT=new Array(nD).fill(0);
+    for(const w of data){
+      const wd=w[4],ws=w[3],di=Math.round(wd/22.5)%nD;
+      for(let si=0;si<4;si++) if(ws>=sE[si]&&ws<sE[si+1]){bins[di][si]++;break;}
+      dT[di]++;sSum+=ws;if(ws>sMx)sMx=ws;tot++;
+    }
+    if(!tot){
+      ctx.fillStyle="#444";ctx.font="11px sans-serif";ctx.textAlign="center";
+      ctx.fillText("No wind data",cx,cy-4);ctx.fillText("in time window",cx,cy+12);
+      document.getElementById("wr-avg").textContent="-";
+      document.getElementById("wr-max").textContent="-";
+      document.getElementById("wr-dom").textContent="-";
+      return;
+    }
+    const mDT=Math.max(1,...dT);
+    // Grid
+    ctx.lineWidth=.5;
+    for(let p=25;p<=100;p+=25){ctx.strokeStyle="rgba(255,255,255,.06)";ctx.beginPath();ctx.arc(cx,cy,mR*p/100,0,Math.PI*2);ctx.stroke();}
+    ctx.strokeStyle="rgba(255,255,255,.04)";
+    for(let i=0;i<16;i++){const a=i*Math.PI*2/16-Math.PI/2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+mR*Math.cos(a),cy+mR*Math.sin(a));ctx.stroke();}
+    // Wedges
+    const wH=Math.PI/nD*.75;
+    for(let di=0;di<nD;di++){
+      const ca=di*Math.PI*2/nD-Math.PI/2; let cr=0;
+      for(let si=0;si<4;si++){
+        if(!bins[di][si]) continue;
+        const br=(bins[di][si]/mDT)*mR;
+        ctx.fillStyle=sC[si];ctx.beginPath();
+        ctx.arc(cx,cy,cr+br,ca-wH,ca+wH);ctx.arc(cx,cy,cr,ca+wH,ca-wH,true);
+        ctx.closePath();ctx.fill();cr+=br;
+      }
+    }
+    // Labels
+    const l8=["N","NE","E","SE","S","SW","W","NW"];
+    ctx.font="bold 9px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+    for(let i=0;i<8;i++){
+      const a=i*Math.PI/4-Math.PI/2;
+      ctx.fillStyle=i===0?"#DB0A40":"#999";
+      ctx.fillText(l8[i],cx+(mR+13)*Math.cos(a),cy+(mR+13)*Math.sin(a));
+    }
+    ctx.fillStyle="rgba(255,255,255,.15)";ctx.beginPath();ctx.arc(cx,cy,2,0,Math.PI*2);ctx.fill();
+    // Stats
+    const domI=dT.indexOf(Math.max(...dT));
+    document.getElementById("wr-avg").textContent=(sSum/tot).toFixed(1);
+    document.getElementById("wr-max").textContent=sMx.toFixed(0);
+    document.getElementById("wr-dom").textContent=COMPASS[domI];
+  }
+
+  // ================================================================
+  // ALTITUDE PROFILE (solo mode)
+  // ================================================================
+  function drawAltProfile(aid, t) {
+    const wrap = document.getElementById("alt-profile-wrap");
+    const c = document.getElementById("alt-profile-canvas");
+    if (!aid || !raceData.tracks[aid]) { wrap.style.display="none"; return; }
+    wrap.style.display = "block";
+    const pts = raceData.tracks[aid].points;
+    const ctx = c.getContext("2d");
+    const dpr = window.devicePixelRatio||1;
+    const W = c.clientWidth||240, H = 80;
+    c.width = W*dpr; c.height = H*dpr;
+    c.style.height = H+"px";
+    ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,W,H);
+
+    // Find alt range
+    let aMin=Infinity,aMax=-Infinity;
+    for(const p of pts){if(p[2]<aMin)aMin=p[2];if(p[2]>aMax)aMax=p[2];}
+    const aRange=Math.max(1,aMax-aMin);
+    const tMin=pts[0][3], tMax=pts[pts.length-1][3], tRange=Math.max(1,tMax-tMin);
+    const pad=4;
+
+    // Draw filled area
+    ctx.beginPath();
+    ctx.moveTo(pad, H-pad);
+    for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/300))){
+      const x=pad+(pts[i][3]-tMin)/tRange*(W-2*pad);
+      const y=H-pad-(pts[i][2]-aMin)/aRange*(H-2*pad);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.lineTo(W-pad, H-pad);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0,pad,0,H);
+    grad.addColorStop(0,"rgba(52,199,89,0.4)");
+    grad.addColorStop(1,"rgba(52,199,89,0.02)");
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Draw line
+    ctx.beginPath();
+    for(let i=0;i<pts.length;i+=Math.max(1,Math.floor(pts.length/300))){
+      const x=pad+(pts[i][3]-tMin)/tRange*(W-2*pad);
+      const y=H-pad-(pts[i][2]-aMin)/aRange*(H-2*pad);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle="#34c759";ctx.lineWidth=1.5;ctx.stroke();
+
+    // Current time marker
+    if(t>=tMin&&t<=tMax){
+      const cx_=pad+(t-tMin)/tRange*(W-2*pad);
+      ctx.strokeStyle="#DB0A40";ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(cx_,pad);ctx.lineTo(cx_,H-pad);ctx.stroke();
+    }
+
+    // Labels
+    ctx.fillStyle="#888";ctx.font="9px sans-serif";ctx.textAlign="left";
+    ctx.fillText(Math.round(aMax)+"m",pad+2,pad+9);
+    ctx.fillText(Math.round(aMin)+"m",pad+2,H-pad-2);
+  }
+
+  // ================================================================
+  // SOLO MODE
+  // ================================================================
+  function setSolo(aid) {
+    if (aid && aid !== soloAthlete) {
+      soloAthlete = aid;
+      soloChip.setAttribute("active","");
+      soloChipId.textContent = aid;
+      showAllBtn.style.display = "inline-flex";
+      for (const id of Object.keys(trackGfx)) {
+        athVis[id] = (id===aid);
+        trackGfx[id].visible = (id===aid);
+        if (id!==aid && markers[id]) markers[id].visible = false;
+      }
+      document.querySelectorAll("calcite-list-item[data-aid]").forEach(el => {
+        el.style.opacity = el.dataset.aid===aid ? "1" : "0.3";
+      });
+      if (!windLayer.visible) { windLayer.visible=true; document.getElementById("sw-wind").checked=true; }
+    } else {
+      soloAthlete = null;
+      soloChip.removeAttribute("active");
+      showAllBtn.style.display = "none";
+      for (const id of Object.keys(trackGfx)) { athVis[id]=true; trackGfx[id].visible=true; }
+      document.querySelectorAll("calcite-list-item[data-aid]").forEach(el => { el.style.opacity="1"; });
+      document.getElementById("alt-profile-wrap").style.display = "none";
+    }
+    lastThUpdate=0; lastWdUpdate=0;
+    updateThermals(currentTime,true);
+    updateWind(currentTime,true);
+    updatePositions(currentTime);
+  }
+
+  showAllBtn.addEventListener("click", () => setSolo(null));
+  document.getElementById("solo-clear-btn").addEventListener("click", () => setSolo(null));
+
+  // ================================================================
+  // SIDEBAR
+  // ================================================================
+  function buildSidebar() {
+    const list = document.getElementById("athlete-list");
+    const aids = Object.keys(raceData.tracks).sort((a,b)=>+a-+b);
+    let ci = 0;
+    for (const aid of aids) {
+      const t = raceData.tracks[aid];
+      if (t.points.length<2) continue;
+      const [r,g,b] = t.color;
+      const item = document.createElement("calcite-list-item");
+      item.setAttribute("label", "Athlete #"+aid);
+      item.setAttribute("description", "");
+      item.dataset.aid = aid;
+
+      // Color dot
+      const dot = document.createElement("div");
+      dot.className = "athlete-dot";
+      dot.style.background = `rgb(${r},${g},${b})`;
+      dot.slot = "content-start";
+      item.appendChild(dot);
+
+      // Alt badge
+      const badge = document.createElement("span");
+      badge.className = "alt-badge";
+      badge.id = "alt-"+aid;
+      badge.textContent = "--";
+      badge.slot = "content-end";
+      item.appendChild(badge);
+
+      // Solo action
+      const soloAction = document.createElement("calcite-action");
+      soloAction.setAttribute("icon","pin");
+      soloAction.setAttribute("text","Solo");
+      soloAction.setAttribute("scale","s");
+      soloAction.slot = "actions-end";
+      soloAction.addEventListener("click", e => { e.stopPropagation(); setSolo(aid===soloAthlete?null:aid); });
+      item.appendChild(soloAction);
+
+      // Click = toggle, dblclick = fly to
+      item.addEventListener("click", () => {
+        if (soloAthlete) { setSolo(aid); } else {
+          athVis[aid] = !athVis[aid];
+          trackGfx[aid].visible = athVis[aid];
+          if (!athVis[aid]) markers[aid].visible = false;
+          item.style.opacity = athVis[aid] ? "1" : "0.3";
+        }
+      });
+      item.addEventListener("dblclick", e => {
+        e.preventDefault();
+        const mk = markers[aid];
+        if (mk&&mk.visible&&mk.geometry) view.goTo({target:mk.geometry,zoom:14,tilt:70},{duration:1500});
+      });
+
+      list.appendChild(item);
+      ci++;
+    }
+  }
+
+  // ================================================================
+  // TIME CONTROLS
+  // ================================================================
+  function setupControls() {
+    slider.addEventListener("calciteSliderInput", () => { currentTime=+slider.value; updateAll(); });
 
     playBtn.addEventListener("click", () => {
       isPlaying = !isPlaying;
-      playBtn.innerHTML = isPlaying ? "&#9646;&#9646;" : "&#9654;";
-      playBtn.classList.toggle("active", isPlaying);
+      playBtn.setAttribute("icon-start", isPlaying ? "pause" : "play");
+      playBtn.setAttribute("kind", isPlaying ? "danger" : "brand");
       if (isPlaying) lastFrameMs = performance.now();
     });
 
-    document.querySelectorAll(".speed-btn").forEach(btn => {
+    document.querySelectorAll(".spd-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".speed-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
+        document.querySelectorAll(".spd-btn").forEach(b => { b.setAttribute("appearance","outline"); });
+        btn.setAttribute("appearance","solid");
         playSpeed = +btn.dataset.speed;
       });
     });
 
+    // Layer switches
+    document.getElementById("sw-tracks").addEventListener("calciteSwitchChange", e => { trackLayer.visible=e.target.checked; });
+    document.getElementById("sw-markers").addEventListener("calciteSwitchChange", e => { markerLayer.visible=e.target.checked; });
+    document.getElementById("sw-thermals").addEventListener("calciteSwitchChange", e => { thermalLayer.visible=e.target.checked; });
+    document.getElementById("sw-wind").addEventListener("calciteSwitchChange", e => { windLayer.visible=e.target.checked; if(e.target.checked) updateWind(currentTime,true); });
+
+    // Keyboard
+    document.addEventListener("keydown", e => {
+      if(e.target.tagName==="CALCITE-INPUT") return;
+      if(e.code==="Space"){e.preventDefault();playBtn.click();}
+      if(e.code==="ArrowRight"){currentTime=Math.min(maxTs,currentTime+3600);slider.value=currentTime;updateAll();}
+      if(e.code==="ArrowLeft"){currentTime=Math.max(minTs,currentTime-3600);slider.value=currentTime;updateAll();}
+    });
+
+    // Animation loop
     function tick(now) {
       if (isPlaying) {
-        const dtReal = (now - lastFrameMs) / 1000;
-        if (dtReal > 0 && dtReal < 1) {
-          currentTime += dtReal * playSpeed;
-          if (currentTime > maxTs) currentTime = minTs;
-          slider.value = currentTime;
-          updateAll();
-        }
+        const dt=(now-lastFrameMs)/1000;
+        if(dt>0&&dt<1){currentTime+=dt*playSpeed;if(currentTime>maxTs)currentTime=minTs;slider.value=currentTime;updateAll();}
       }
-      lastFrameMs = now;
-      requestAnimationFrame(tick);
+      lastFrameMs=now;requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
     updateTimeDisplay(currentTime);
-
-    document.addEventListener("keydown", e => {
-      if (e.target.tagName === "INPUT" && e.target.type !== "range") return;
-      if (e.code === "Space") { e.preventDefault(); playBtn.click(); }
-      if (e.code === "ArrowRight") { currentTime = Math.min(maxTs, currentTime + 3600); slider.value = currentTime; updateAll(); }
-      if (e.code === "ArrowLeft") { currentTime = Math.max(minTs, currentTime - 3600); slider.value = currentTime; updateAll(); }
-    });
-
-    function updateAll() {
-      updateTimeDisplay(currentTime);
-      updatePositions(currentTime);
-      updateThermals(currentTime);
-      updateWind(currentTime);
-    }
   }
+
+  function updateAll() { updateTimeDisplay(currentTime); updatePositions(currentTime); updateThermals(currentTime); updateWind(currentTime); }
 
   function updateTimeDisplay(t) {
-    const d = new Date(t * 1000);
-    const dayNum = Math.floor((t - RACE_START_DATE.getTime() / 1000) / 86400) + 1;
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    document.getElementById("time-day").innerHTML = `Day <span class="day-num">${Math.max(1, dayNum)}</span>`;
-    document.getElementById("time-date").textContent = `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
-    document.getElementById("time-clock").textContent = String(d.getUTCHours()).padStart(2, "0") + ":" + String(d.getUTCMinutes()).padStart(2, "0");
+    const d=new Date(t*1000);
+    const dn=Math.max(1,Math.floor((t-RACE_START.getTime()/1000)/86400)+1);
+    document.getElementById("t-day").textContent = dn;
+    document.getElementById("t-date").textContent = `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+    document.getElementById("t-clock").textContent = String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0");
     view.environment.lighting.date = d;
   }
-
-  function setSoloAthlete(aid) {
-    const showAllBtn = document.getElementById("show-all-btn");
-    const soloIndicator = document.getElementById("solo-indicator");
-    const soloIdEl = document.getElementById("solo-id");
-    const rows = document.querySelectorAll(".athlete-row");
-
-    if (aid && aid !== soloAthlete) {
-      // Enter solo mode
-      soloAthlete = aid;
-      showAllBtn.classList.add("visible");
-      soloIndicator.style.display = "inline";
-      soloIdEl.textContent = aid;
-
-      for (const id of Object.keys(trackGraphics)) {
-        const isSolo = (id === aid);
-        athleteVisible[id] = isSolo;
-        trackGraphics[id].visible = isSolo;
-        if (!isSolo && markers[id]) markers[id].visible = false;
-      }
-      rows.forEach(row => {
-        const rowAid = row.dataset.aid;
-        row.classList.toggle("hidden", rowAid !== aid);
-        row.classList.toggle("solo", rowAid === aid);
-      });
-    } else {
-      // Exit solo mode - show all
-      soloAthlete = null;
-      showAllBtn.classList.remove("visible");
-      soloIndicator.style.display = "none";
-
-      for (const id of Object.keys(trackGraphics)) {
-        athleteVisible[id] = true;
-        trackGraphics[id].visible = true;
-      }
-      rows.forEach(row => {
-        row.classList.remove("hidden", "solo");
-      });
-    }
-
-    // Reset throttle to ensure forced updates aren't suppressed
-    lastThermalUpdate = 0;
-    lastWindUpdate = 0;
-
-    // In solo mode, auto-enable wind layer to show athlete's wind data
-    if (soloAthlete && !windLayer.visible) {
-      windLayer.visible = true;
-      document.getElementById("toggle-wind").checked = true;
-      document.getElementById("analysis-panel").style.display = "block";
-    }
-
-    // Force refresh all layers with new filter
-    updateThermals(currentTime, true);
-    updateWind(currentTime, true);
-    updatePositions(currentTime);
-  }
-
-  function buildSidebar() {
-    const list = document.getElementById("athlete-list");
-    const showAllBtn = document.getElementById("show-all-btn");
-
-    showAllBtn.addEventListener("click", () => setSoloAthlete(null));
-
-    for (const aid of Object.keys(raceData.tracks).sort((a,b) => +a - +b)) {
-      const t = raceData.tracks[aid];
-      if (t.points.length < 2) continue;
-      const [r, g, b] = t.color;
-      const row = document.createElement("div");
-      row.className = "athlete-row";
-      row.dataset.aid = aid;
-      row.innerHTML = `<div class="athlete-dot" style="background:rgb(${r},${g},${b})"></div><span class="athlete-label">Athlete #${aid}</span><button class="solo-btn" data-aid="${aid}" title="Solo: show only this athlete's data">SOLO</button><span class="athlete-alt" id="alt-${aid}">--</span>`;
-
-      // Solo button click
-      row.querySelector(".solo-btn").addEventListener("click", e => {
-        e.stopPropagation();
-        setSoloAthlete(aid === soloAthlete ? null : aid);
-      });
-
-      // Left-click row: toggle visibility (in normal mode) or switch solo target
-      row.addEventListener("click", e => {
-        if (e.target.classList.contains("solo-btn")) return;
-        if (soloAthlete) {
-          setSoloAthlete(aid);
-        } else {
-          athleteVisible[aid] = !athleteVisible[aid];
-          row.classList.toggle("hidden", !athleteVisible[aid]);
-          trackGraphics[aid].visible = athleteVisible[aid];
-          if (!athleteVisible[aid]) markers[aid].visible = false;
-        }
-      });
-
-      // Right-click: also triggers solo mode
-      row.addEventListener("contextmenu", e => {
-        e.preventDefault();
-        setSoloAthlete(aid === soloAthlete ? null : aid);
-      });
-
-      // Double-click: fly to athlete
-      row.addEventListener("dblclick", e => {
-        e.preventDefault();
-        const mk = markers[aid];
-        if (mk && mk.visible && mk.geometry) view.goTo({ target: mk.geometry, zoom: 14, tilt: 70 }, { duration: 1500 });
-      });
-
-      list.appendChild(row);
-    }
-  }
-
-  document.getElementById("toggle-tracks").addEventListener("change", e => { trackLayer.visible = e.target.checked; });
-  document.getElementById("toggle-thermals").addEventListener("change", e => { thermalLayer.visible = e.target.checked; });
-  document.getElementById("toggle-wind").addEventListener("change", e => {
-    windLayer.visible = e.target.checked;
-    if (e.target.checked) updateWind(currentTime, true);
-  });
-  document.getElementById("toggle-markers").addEventListener("change", e => { markerLayer.visible = e.target.checked; });
 
 }); // end require
 } // end initApp
