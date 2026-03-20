@@ -303,8 +303,6 @@
         <h3>Layers</h3>
         <div class="toggle-row"><span class="toggle-label"><calcite-icon icon="line" scale="s"></calcite-icon> Tracks</span><calcite-switch id="sw-tracks" checked></calcite-switch></div>
         <div class="toggle-row"><span class="toggle-label"><calcite-icon icon="point" scale="s"></calcite-icon> Athletes</span><calcite-switch id="sw-markers" checked></calcite-switch></div>
-        <div class="toggle-row"><span class="toggle-label"><calcite-icon icon="altitude" scale="s"></calcite-icon> Thermals</span><calcite-switch id="sw-thermals" checked></calcite-switch></div>
-        <div class="toggle-row"><span class="toggle-label"><calcite-icon icon="compass" scale="s"></calcite-icon> Wind</span><calcite-switch id="sw-wind"></calcite-switch></div>
       </div>
 
       <!-- Thermal Stats -->
@@ -516,11 +514,9 @@ require([
 
   // -- Layers --
   const trackLayer = new GraphicsLayer({ title:"Tracks", elevationInfo:{mode:"absolute-height"} });
-  const thermalLayer = new GraphicsLayer({ title:"Thermals", elevationInfo:{mode:"absolute-height"} });
-  const windLayer = new GraphicsLayer({ title:"Wind", elevationInfo:{mode:"absolute-height"}, visible:false });
   const markerLayer = new GraphicsLayer({ title:"Athletes", elevationInfo:{mode:"absolute-height"} });
 
-  const map = new Map({ basemap:"satellite", ground:"world-elevation", layers:[trackLayer,thermalLayer,windLayer,markerLayer] });
+  const map = new Map({ basemap:"satellite", ground:"world-elevation", layers:[trackLayer,markerLayer] });
 
   const view = new SceneView({
     container:"viewDiv", map, qualityProfile:"medium",
@@ -700,74 +696,34 @@ require([
   }
 
   function updateThermals(t, force) {
-    // Skip during playback unless forced - this is the #1 perf killer
-    if (!force && isPlaying) return;
     if (!force && Math.abs(t-lastThUpdate) < THERMAL_WINDOW*0.4) return;
     lastThUpdate = t;
-    thermalLayer.removeAll();
+    // No map graphics - analysis panel only
     const s=t-THERMAL_WINDOW, e=t+THERMAL_WINDOW, sid=soloAthlete?+soloAthlete:null;
     let lo=0,hi=thermals.length;
     while(lo<hi){const m=(lo+hi)>>1; if(thermals[m][4]<s) lo=m+1; else hi=m;}
-    let cnt=0; const gfx=[];
     const visTh=[], visWd=[];
     for(let i=lo;i<thermals.length&&thermals[i][4]<=e;i++){
       const th=thermals[i];
       if(sid!==null&&th[5]!==sid) continue;
       visTh.push(th);
-      if(cnt<800) {
-        const vs=th[3],col=thermalColor(vs);
-        const sz = 6 + vs * 3;
-        gfx.push(new Graphic({
-          geometry:new Point({longitude:th[0],latitude:th[1],z:th[2],spatialReference:{wkid:4326}}),
-          symbol:new PointSymbol3D({symbolLayers:[
-            new IconSymbol3DLayer({resource:{primitive:"circle"},material:{color:col},size:sz,outline:{color:[255,255,255,0.3],size:0.5}})
-          ]})
-        }));
-      }
-      cnt++;
     }
-    thermalLayer.addMany(gfx);
     document.getElementById("stat-thermals").textContent = visTh.length;
 
-    // Wind data for analysis panel
     const ws=t-WIND_WINDOW, we=t+WIND_WINDOW;
     let wlo=0,whi=wind.length;
     while(wlo<whi){const m=(wlo+whi)>>1;if(wind[m][5]<ws)wlo=m+1;else whi=m;}
     for(let i=wlo;i<wind.length&&wind[i][5]<=we;i++){
       const w=wind[i]; if(sid!==null&&w[6]!==sid) continue; visWd.push(w);
     }
+    document.getElementById("stat-wind").textContent = visWd.length;
     updateAnalysis(visTh,visWd);
   }
 
   // ================================================================
   // WIND
   // ================================================================
-  function updateWind(t,force) {
-    if (!force && isPlaying) return;
-    if(!force&&Math.abs(t-lastWdUpdate)<WIND_WINDOW*0.4) return;
-    lastWdUpdate=t; windLayer.removeAll(); if(!windLayer.visible) return;
-    const s=t-WIND_WINDOW,e=t+WIND_WINDOW,sid=soloAthlete?+soloAthlete:null;
-    let lo=0,hi=wind.length;
-    while(lo<hi){const m=(lo+hi)>>1;if(wind[m][5]<s)lo=m+1;else hi=m;}
-    let cnt=0;const gfx=[];
-    for(let i=lo;i<wind.length&&wind[i][5]<=e;i++){
-      const w=wind[i]; if(sid!==null&&w[6]!==sid) continue;
-      if(cnt<500) {
-        const ws=w[3],intensity=Math.min(1,ws/40);
-        const r=Math.round(72+intensity*183),g=Math.round(176-intensity*136),b=Math.round(199-intensity*55);
-        gfx.push(new Graphic({
-          geometry:new Point({longitude:w[0],latitude:w[1],z:w[2],spatialReference:{wkid:4326}}),
-          symbol:new PointSymbol3D({symbolLayers:[
-            new IconSymbol3DLayer({resource:{primitive:"circle"},material:{color:[r,g,b,0.7]},size:5+ws*0.2,outline:{color:[r,g,b,0.9],size:0.5}})
-          ]}),
-          popupTemplate:{title:"Wind",content:`<b>${ws}</b> km/h from <b>${w[4]}&deg; (${COMPASS[Math.round(w[4]/22.5)%16]})</b><br>Alt: ${w[2]}m`}
-        }));
-      }
-      cnt++;
-    }
-    windLayer.addMany(gfx);
-    document.getElementById("stat-wind").textContent = cnt;
-  }
+  // Wind map graphics removed - data shown via wind rose chart in analysis panel
 
   // ================================================================
   // ANALYSIS PANEL: STATS + WIND ROSE + ALT PROFILE
@@ -788,29 +744,7 @@ require([
     if (soloAthlete) drawAltProfile(soloAthlete, currentTime);
   }
 
-  // Lightweight version: just collects data + updates charts (no map graphics)
-  function updateAnalysisOnly(t) {
-    const sid = soloAthlete ? +soloAthlete : null;
-    const visTh = [], visWd = [];
 
-    // Thermals in window
-    const ts = t - THERMAL_WINDOW, te = t + THERMAL_WINDOW;
-    let lo = 0, hi = thermals.length;
-    while (lo < hi) { const m = (lo + hi) >> 1; if (thermals[m][4] < ts) lo = m + 1; else hi = m; }
-    for (let i = lo; i < thermals.length && thermals[i][4] <= te; i++) {
-      const th = thermals[i]; if (sid !== null && th[5] !== sid) continue; visTh.push(th);
-    }
-
-    // Wind in window
-    const ws = t - WIND_WINDOW, we = t + WIND_WINDOW;
-    let wlo = 0, whi = wind.length;
-    while (wlo < whi) { const m = (wlo + whi) >> 1; if (wind[m][5] < ws) wlo = m + 1; else whi = m; }
-    for (let i = wlo; i < wind.length && wind[i][5] <= we; i++) {
-      const w = wind[i]; if (sid !== null && w[6] !== sid) continue; visWd.push(w);
-    }
-
-    updateAnalysis(visTh, visWd);
-  }
 
   function drawWindRose(data) {
     const c=document.getElementById("wind-rose-canvas"),ctx=c.getContext("2d");
@@ -950,7 +884,6 @@ require([
       document.querySelectorAll("calcite-list-item[data-aid]").forEach(el => {
         el.style.opacity = el.dataset.aid===aid ? "1" : "0.3";
       });
-      if (!windLayer.visible) { windLayer.visible=true; document.getElementById("sw-wind").checked=true; }
     } else {
       soloAthlete = null;
       soloChip.removeAttribute("active");
@@ -1040,12 +973,7 @@ require([
       isPlaying = !isPlaying;
       playBtn.innerHTML = isPlaying ? "&#9646;&#9646;" : "&#9654;";
       playBtn.classList.toggle("playing", isPlaying);
-      if (isPlaying) {
-        lastFrameMs = performance.now();
-      } else {
-        updateThermals(currentTime, true);
-        updateWind(currentTime, true);
-      }
+      if (isPlaying) lastFrameMs = performance.now();
     });
 
     document.querySelectorAll(".spd-btn").forEach(btn => {
@@ -1059,8 +987,6 @@ require([
     // Layer switches
     document.getElementById("sw-tracks").addEventListener("calciteSwitchChange", e => { trackLayer.visible=e.target.checked; });
     document.getElementById("sw-markers").addEventListener("calciteSwitchChange", e => { markerLayer.visible=e.target.checked; });
-    document.getElementById("sw-thermals").addEventListener("calciteSwitchChange", e => { thermalLayer.visible=e.target.checked; });
-    document.getElementById("sw-wind").addEventListener("calciteSwitchChange", e => { windLayer.visible=e.target.checked; if(e.target.checked) updateWind(currentTime,true); });
 
     // Keyboard
     document.addEventListener("keydown", e => {
@@ -1071,7 +997,7 @@ require([
     });
 
     // Animation loop
-    let emptyFrames = 0, lastAnalysisMs = 0;
+    let emptyFrames = 0;
     function tick(now) {
       if (isPlaying) {
         const dt=(now-lastFrameMs)/1000;
@@ -1079,14 +1005,7 @@ require([
           currentTime+=dt*playSpeed;
           if(currentTime>maxTs) currentTime=raceStart;
           slider.value=currentTime;
-          updateTimeDisplay(currentTime);
-          updatePositions(currentTime);
-
-          // Update analysis panel every ~500ms (cheap: no map graphics)
-          if (now - lastAnalysisMs > 500) {
-            lastAnalysisMs = now;
-            updateAnalysisOnly(currentTime);
-          }
+          updateAll();
 
           // Auto-skip if no athletes visible
           const ac = +document.getElementById("stat-active").textContent;
