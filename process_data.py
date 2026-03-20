@@ -100,10 +100,11 @@ for csv_file in csv_files:
                 # Prefer Naviter (N) > Satellite (S) > others; also prefer richer data
                 sensor_priority = {'N': 3, 'S': 2, 'F': 1, 'O': 0, 'B': 0}
                 new_priority = sensor_priority.get(sensor, 0)
-                if existing is None or new_priority > existing[5]:
+                if existing is None or new_priority > existing[6]:
                     track_buckets[aid][bk] = [
                         round(lon, 4), round(lat, 4), int(alt),
                         ts_int, act_code,
+                        round(gs, 1) if gs else 0,
                         new_priority  # temp: sensor priority for dedup
                     ]
 
@@ -132,8 +133,8 @@ tracks = {}
 for aid in sorted(track_buckets.keys(), key=lambda x: int(x)):
     sorted_pts = sorted(track_buckets[aid].values(), key=lambda x: x[3])
     # Remove the sensor_priority field (index 7)
-    # Strip sensor_priority (index 5), keep [lon, lat, alt, ts, act]
-    tracks[aid] = [[p[0], p[1], p[2], p[3], p[4]] for p in sorted_pts]
+    # Strip sensor_priority (index 6), keep [lon, lat, alt, ts, act, groundspeed]
+    tracks[aid] = [[p[0], p[1], p[2], p[3], p[4], p[5]] for p in sorted_pts]
 
 thermals = sorted(thermal_buckets.values(), key=lambda x: x[4])
 wind_pts = sorted(wind_buckets.values(), key=lambda x: x[5])
@@ -179,7 +180,7 @@ output = {
     "wind": wind_pts,
     "meta": {
         "min_ts": min_ts, "max_ts": max_ts,
-        "track_fields": ["lon", "lat", "alt", "ts", "activity"],
+        "track_fields": ["lon", "lat", "alt", "ts", "activity", "groundspeed"],
         "thermal_fields": ["lon", "lat", "alt", "vs", "ts", "aid"],
         "wind_fields": ["lon", "lat", "alt", "ws", "wd", "ts", "aid"],
         "activity_codes": {"0": "Stationary", "1": "Flying", "2": "Hiking", "-1": "Unknown"},
