@@ -151,6 +151,14 @@
     .athlete-row:hover { background: rgba(255,255,255,0.05); }
     .athlete-row.hidden { opacity: 0.3; }
     .athlete-row.solo { background: rgba(219,10,64,0.15); border-left: 3px solid #DB0A40; }
+    .solo-btn {
+      display: none; padding: 1px 5px; font-size: 9px; font-weight: 700;
+      background: rgba(219,10,64,0.2); border: 1px solid rgba(219,10,64,0.4);
+      color: #DB0A40; border-radius: 3px; cursor: pointer; text-transform: uppercase;
+      letter-spacing: 0.5px; flex-shrink: 0; line-height: 1.4;
+    }
+    .athlete-row:hover .solo-btn { display: block; }
+    .athlete-row.solo .solo-btn { display: block; background: #DB0A40; color: #fff; }
     .athlete-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.2); }
     .athlete-label { flex: 1; }
     .athlete-alt { font-size: 11px; color: #8888a0; font-variant-numeric: tabular-nums; min-width: 48px; text-align: right; }
@@ -374,9 +382,10 @@
     </div>
   </div>
   <div id="stats-bar">
-    <span>Thermals visible: <b id="stat-thermals">0</b></span>
-    <span>Wind obs: <b id="stat-wind">0</b></span>
-    <span>Athletes active: <b id="stat-active">0</b></span>
+    <span id="solo-indicator" style="color:#DB0A40;font-weight:700;display:none">SOLO: Athlete #<b id="solo-id"></b></span>
+    <span>Thermals: <b id="stat-thermals">0</b></span>
+    <span>Wind: <b id="stat-wind">0</b></span>
+    <span>Active: <b id="stat-active">0</b></span>
   </div>
 </div>
 
@@ -785,12 +794,16 @@ require([
 
   function setSoloAthlete(aid) {
     const showAllBtn = document.getElementById("show-all-btn");
+    const soloIndicator = document.getElementById("solo-indicator");
+    const soloIdEl = document.getElementById("solo-id");
     const rows = document.querySelectorAll(".athlete-row");
 
     if (aid && aid !== soloAthlete) {
       // Enter solo mode
       soloAthlete = aid;
       showAllBtn.classList.add("visible");
+      soloIndicator.style.display = "inline";
+      soloIdEl.textContent = aid;
 
       for (const id of Object.keys(trackGraphics)) {
         const isSolo = (id === aid);
@@ -807,6 +820,7 @@ require([
       // Exit solo mode - show all
       soloAthlete = null;
       showAllBtn.classList.remove("visible");
+      soloIndicator.style.display = "none";
 
       for (const id of Object.keys(trackGraphics)) {
         athleteVisible[id] = true;
@@ -817,7 +831,17 @@ require([
       });
     }
 
-    // Force refresh thermals and wind with new filter
+    // Reset throttle to ensure forced updates aren't suppressed
+    lastThermalUpdate = 0;
+    lastWindUpdate = 0;
+
+    // In solo mode, auto-enable wind layer to show athlete's wind data
+    if (soloAthlete && !windLayer.visible) {
+      windLayer.visible = true;
+      document.getElementById("toggle-wind").checked = true;
+    }
+
+    // Force refresh all layers with new filter
     updateThermals(currentTime, true);
     updateWind(currentTime, true);
     updatePositions(currentTime);
@@ -836,15 +860,20 @@ require([
       const row = document.createElement("div");
       row.className = "athlete-row";
       row.dataset.aid = aid;
-      row.innerHTML = `<div class="athlete-dot" style="background:rgb(${r},${g},${b})"></div><span class="athlete-label">Athlete #${aid}</span><span class="athlete-alt" id="alt-${aid}">--</span>`;
+      row.innerHTML = `<div class="athlete-dot" style="background:rgb(${r},${g},${b})"></div><span class="athlete-label">Athlete #${aid}</span><button class="solo-btn" data-aid="${aid}" title="Solo: show only this athlete's data">SOLO</button><span class="athlete-alt" id="alt-${aid}">--</span>`;
 
-      // Left-click: toggle visibility (in normal mode) or select solo athlete
+      // Solo button click
+      row.querySelector(".solo-btn").addEventListener("click", e => {
+        e.stopPropagation();
+        setSoloAthlete(aid === soloAthlete ? null : aid);
+      });
+
+      // Left-click row: toggle visibility (in normal mode) or switch solo target
       row.addEventListener("click", e => {
+        if (e.target.classList.contains("solo-btn")) return;
         if (soloAthlete) {
-          // In solo mode, clicking another athlete switches solo to them
           setSoloAthlete(aid);
         } else {
-          // Normal mode: toggle individual
           athleteVisible[aid] = !athleteVisible[aid];
           row.classList.toggle("hidden", !athleteVisible[aid]);
           trackGraphics[aid].visible = athleteVisible[aid];
@@ -852,7 +881,7 @@ require([
         }
       });
 
-      // Right-click: enter solo mode for this athlete
+      // Right-click: also triggers solo mode
       row.addEventListener("contextmenu", e => {
         e.preventDefault();
         setSoloAthlete(aid === soloAthlete ? null : aid);
