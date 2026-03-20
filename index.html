@@ -1082,8 +1082,8 @@ require([
           updateTimeDisplay(currentTime);
           updatePositions(currentTime);
 
-          // Update analysis panel every ~1.5 seconds (cheap: no map graphics)
-          if (now - lastAnalysisMs > 1500) {
+          // Update analysis panel every ~500ms (cheap: no map graphics)
+          if (now - lastAnalysisMs > 500) {
             lastAnalysisMs = now;
             updateAnalysisOnly(currentTime);
           }
