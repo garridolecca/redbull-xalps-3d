@@ -481,7 +481,7 @@ require([
   });
 
   // -- State --
-  let raceData=null, minTs=0, maxTs=0, currentTime=0;
+  let raceData=null, minTs=0, maxTs=0, currentTime=0, raceStart=0;
   let isPlaying=false, playSpeed=3600, lastFrameMs=0;
   let soloAthlete=null, lastThUpdate=0, lastWdUpdate=0;
   const markers={}, trackGfx={}, athVis={};
@@ -537,9 +537,15 @@ require([
 
       raceData = data;
       minTs = data.meta.min_ts; maxTs = data.meta.max_ts;
-      currentTime = minTs; thermals = data.thermals; wind = data.wind;
+      thermals = data.thermals; wind = data.wind;
 
-      slider.min = minTs; slider.max = maxTs; slider.value = minTs; slider.step = 60;
+      // Find first timestamp where at least 3 athletes have data (skip pre-race gap)
+      raceStart = minTs;
+      const firstTs = Object.values(data.tracks).map(t => t.points.length > 1 ? t.points[0][3] : Infinity).sort((a,b) => a-b);
+      if (firstTs.length >= 3) raceStart = firstTs[2]; // 3rd athlete's start
+      currentTime = raceStart;
+
+      slider.min = minTs; slider.max = maxTs; slider.value = currentTime; slider.step = 60;
 
       statusEl.textContent = "Building 3D scene...";
       await new Promise(r => setTimeout(r, 50));
@@ -984,15 +990,21 @@ require([
     });
 
     // Animation loop - only positions + time during playback (fast path)
+    let emptyFrames = 0;
     function tick(now) {
       if (isPlaying) {
         const dt=(now-lastFrameMs)/1000;
         if(dt>0&&dt<1){
           currentTime+=dt*playSpeed;
-          if(currentTime>maxTs) currentTime=minTs;
+          if(currentTime>maxTs) currentTime=raceStart;
           slider.value=currentTime;
           updateTimeDisplay(currentTime);
           updatePositions(currentTime);
+
+          // Auto-skip if no athletes visible (pre-race or gap)
+          const ac = +document.getElementById("stat-active").textContent;
+          if(ac===0) { emptyFrames++; if(emptyFrames>30) { currentTime+=3600; emptyFrames=0; } }
+          else { emptyFrames=0; }
         }
       }
       lastFrameMs=now;requestAnimationFrame(tick);
