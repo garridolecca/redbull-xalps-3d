@@ -227,28 +227,40 @@
     #load-status { font-size: 13px; color: #666; }
 
     /* ── THERMAL LEGEND ── */
-    #thermal-legend {
-      position: absolute; bottom: 120px; left: 12px; z-index: 10;
-      background: rgba(14,14,24,0.88); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px; backdrop-filter: blur(20px); padding: 10px 12px;
-      font-size: 11px; display: none;
+    /* ── ANALYSIS PANEL ── */
+    #analysis-panel {
+      position: absolute; bottom: 115px; left: 12px; z-index: 10;
+      background: rgba(14,14,24,0.92); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; backdrop-filter: blur(20px);
+      width: 210px; display: none; overflow: hidden;
     }
-    #thermal-legend h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
-    .legend-bar { width: 120px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, #FFD700, #FF8C00, #FF4500, #DC143C); margin-bottom: 4px; }
-    .legend-labels { display: flex; justify-content: space-between; font-size: 10px; color: #888; }
+    .ap-section { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .ap-section:last-child { border-bottom: none; }
+    .ap-title {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: #666;
+      margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+    }
+    .ap-title-dot { width: 6px; height: 6px; border-radius: 50%; }
 
-    /* ── WIND LEGEND ── */
-    #wind-legend {
-      position: absolute; bottom: 120px; left: 148px; z-index: 10;
-      background: rgba(14,14,24,0.88); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 8px; backdrop-filter: blur(20px); padding: 10px 12px;
-      font-size: 11px; display: none;
-    }
-    #wind-legend h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
-    .wind-legend-bar { width: 120px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, #48B0C7, #3288D0, #1E60E0, #FF4444); margin-bottom: 4px; }
-    .wind-legend-labels { display: flex; justify-content: space-between; font-size: 10px; color: #888; }
-    .wind-legend-arrow { font-size: 10px; color: #888; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06); }
-    .wind-legend-arrow span { color: #48B0C7; font-size: 14px; }
+    /* Thermal stats */
+    .thermal-stats { display: flex; gap: 10px; margin-bottom: 6px; }
+    .thermal-stat { text-align: center; flex: 1; }
+    .thermal-stat .val { font-size: 16px; font-weight: 700; color: #FF8C00; line-height: 1.2; }
+    .thermal-stat .lbl { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+    .legend-bar { width: 100%; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #FFD700, #FF8C00, #FF4500, #DC143C); }
+    .legend-labels { display: flex; justify-content: space-between; font-size: 9px; color: #555; margin-top: 2px; }
+    .ap-hint { font-size: 9px; color: #444; margin-top: 6px; font-style: italic; }
+
+    /* Wind rose */
+    #wind-rose-wrap { text-align: center; }
+    #wind-rose-canvas { display: block; margin: 0 auto; }
+    .wr-speed-legend { display: flex; justify-content: center; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
+    .wr-speed-item { display: flex; align-items: center; gap: 3px; font-size: 9px; color: #888; }
+    .wr-speed-dot { width: 8px; height: 8px; border-radius: 2px; }
+    .wr-stats { display: flex; justify-content: center; gap: 12px; margin-top: 6px; }
+    .wr-stat .val { font-size: 14px; font-weight: 700; color: #48B0C7; }
+    .wr-stat .lbl { font-size: 9px; color: #666; text-transform: uppercase; }
+    .wr-stat { text-align: center; }
 
     .esri-ui-corner .esri-component { border-radius: 8px !important; }
   </style>
@@ -402,17 +414,39 @@
   </div>
 </div>
 
-<div id="thermal-legend">
-  <h3>Thermal Strength (m/s)</h3>
-  <div class="legend-bar"></div>
-  <div class="legend-labels"><span>1.0</span><span>2.0</span><span>3.0</span><span>4.0+</span></div>
-</div>
+<div id="analysis-panel">
+  <!-- THERMAL SECTION -->
+  <div class="ap-section">
+    <div class="ap-title"><div class="ap-title-dot" style="background:linear-gradient(135deg,#FFD700,#FF4500)"></div> Thermals</div>
+    <div class="thermal-stats">
+      <div class="thermal-stat"><div class="val" id="th-count">0</div><div class="lbl">Active</div></div>
+      <div class="thermal-stat"><div class="val" id="th-avg">-</div><div class="lbl">Avg m/s</div></div>
+      <div class="thermal-stat"><div class="val" id="th-max">-</div><div class="lbl">Max m/s</div></div>
+    </div>
+    <div class="legend-bar"></div>
+    <div class="legend-labels"><span>1.0</span><span>2.0</span><span>3.0</span><span>4.0+</span></div>
+    <div class="ap-hint">3D cylinders on map = thermal lift locations</div>
+  </div>
 
-<div id="wind-legend">
-  <h3>Wind Speed (km/h)</h3>
-  <div class="wind-legend-bar"></div>
-  <div class="wind-legend-labels"><span>0</span><span>10</span><span>20</span><span>40+</span></div>
-  <div class="wind-legend-arrow"><span>&#8593;</span> Arrow points in wind direction</div>
+  <!-- WIND ROSE SECTION -->
+  <div class="ap-section">
+    <div class="ap-title"><div class="ap-title-dot" style="background:linear-gradient(135deg,#48B0C7,#0078FF)"></div> Wind Rose</div>
+    <div id="wind-rose-wrap">
+      <canvas id="wind-rose-canvas" width="182" height="182"></canvas>
+    </div>
+    <div class="wr-speed-legend">
+      <div class="wr-speed-item"><div class="wr-speed-dot" style="background:#48B0C7"></div> 0-5</div>
+      <div class="wr-speed-item"><div class="wr-speed-dot" style="background:#3288D0"></div> 5-15</div>
+      <div class="wr-speed-item"><div class="wr-speed-dot" style="background:#1E60E0"></div> 15-25</div>
+      <div class="wr-speed-item"><div class="wr-speed-dot" style="background:#FF4444"></div> 25+ km/h</div>
+    </div>
+    <div class="wr-stats">
+      <div class="wr-stat"><div class="val" id="wr-avg">-</div><div class="lbl">Avg km/h</div></div>
+      <div class="wr-stat"><div class="val" id="wr-max">-</div><div class="lbl">Max km/h</div></div>
+      <div class="wr-stat"><div class="val" id="wr-dom">-</div><div class="lbl">Dominant</div></div>
+    </div>
+    <div class="ap-hint">3D cones on map = wind direction &amp; speed</div>
+  </div>
 </div>
 
 <div id="loading">
@@ -581,7 +615,7 @@ require([
         updatePositions(currentTime);
         updateThermals(currentTime);
         document.getElementById("loading").classList.add("done");
-        document.getElementById("thermal-legend").style.display = "block";
+        document.getElementById("analysis-panel").style.display = "block";
       });
     })
     .catch(err => { statusEl.textContent = "Error: " + err.message; console.error(err); });
@@ -654,6 +688,152 @@ require([
     return dirs[Math.round(deg / 22.5) % 16];
   }
 
+  // ============================================================
+  // WIND ROSE CHART
+  // ============================================================
+  function drawWindRose(windData) {
+    const canvas = document.getElementById("wind-rose-canvas");
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const size = 182;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    canvas.style.width = size + "px";
+    canvas.style.height = size + "px";
+    ctx.scale(dpr, dpr);
+
+    const cx = size / 2, cy = size / 2, maxR = 68;
+
+    ctx.clearRect(0, 0, size, size);
+
+    // 16 direction bins x 4 speed bins
+    const nDirs = 16;
+    const speedEdges = [0, 5, 15, 25, 200];
+    const speedColors = ["rgba(72,176,199,0.85)", "rgba(50,136,208,0.85)", "rgba(30,96,224,0.85)", "rgba(255,68,68,0.85)"];
+    const bins = Array.from({length: nDirs}, () => [0, 0, 0, 0]);
+    let total = 0, sumSpeed = 0, maxSpeed = 0;
+    const dirTotals = new Array(nDirs).fill(0);
+
+    for (const w of windData) {
+      const wd = w[4], ws = w[3];
+      const di = Math.round(wd / 22.5) % nDirs;
+      for (let si = 0; si < 4; si++) {
+        if (ws >= speedEdges[si] && ws < speedEdges[si + 1]) { bins[di][si]++; break; }
+      }
+      dirTotals[di]++;
+      sumSpeed += ws;
+      if (ws > maxSpeed) maxSpeed = ws;
+      total++;
+    }
+
+    // No data state
+    if (total === 0) {
+      ctx.fillStyle = "#444";
+      ctx.font = "11px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("No wind data in", cx, cy - 6);
+      ctx.fillText("current time window", cx, cy + 10);
+      document.getElementById("wr-avg").textContent = "-";
+      document.getElementById("wr-max").textContent = "-";
+      document.getElementById("wr-dom").textContent = "-";
+      return;
+    }
+
+    const maxDirTotal = Math.max(1, ...dirTotals);
+
+    // Grid circles
+    ctx.lineWidth = 0.5;
+    for (let pct = 25; pct <= 100; pct += 25) {
+      ctx.strokeStyle = "rgba(255,255,255,0.07)";
+      ctx.beginPath();
+      ctx.arc(cx, cy, maxR * pct / 100, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Grid spokes
+    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    for (let i = 0; i < 16; i++) {
+      const a = i * Math.PI * 2 / 16 - Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + maxR * Math.cos(a), cy + maxR * Math.sin(a));
+      ctx.stroke();
+    }
+
+    // Draw stacked wedges
+    const wedgeHalf = Math.PI / nDirs * 0.75;
+    for (let di = 0; di < nDirs; di++) {
+      const centerAngle = di * Math.PI * 2 / nDirs - Math.PI / 2;
+      let cumR = 0;
+      for (let si = 0; si < 4; si++) {
+        if (bins[di][si] === 0) continue;
+        const barR = (bins[di][si] / maxDirTotal) * maxR;
+        const inner = cumR, outer = cumR + barR;
+
+        ctx.fillStyle = speedColors[si];
+        ctx.beginPath();
+        ctx.arc(cx, cy, outer, centerAngle - wedgeHalf, centerAngle + wedgeHalf);
+        ctx.arc(cx, cy, inner, centerAngle + wedgeHalf, centerAngle - wedgeHalf, true);
+        ctx.closePath();
+        ctx.fill();
+        cumR = outer;
+      }
+    }
+
+    // Direction labels
+    const labels8 = ["N","NE","E","SE","S","SW","W","NW"];
+    ctx.fillStyle = "#aaa";
+    ctx.font = "bold 9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4 - Math.PI / 2;
+      const lx = cx + (maxR + 13) * Math.cos(a);
+      const ly = cy + (maxR + 13) * Math.sin(a);
+      ctx.fillStyle = i === 0 ? "#DB0A40" : "#999";
+      ctx.fillText(labels8[i], lx, ly);
+    }
+
+    // Center dot
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Update stats
+    const avgSpeed = (sumSpeed / total).toFixed(1);
+    const domDir = dirTotals.indexOf(Math.max(...dirTotals));
+    const compassDirs = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+    document.getElementById("wr-avg").textContent = avgSpeed;
+    document.getElementById("wr-max").textContent = maxSpeed.toFixed(0);
+    document.getElementById("wr-dom").textContent = compassDirs[domDir];
+  }
+
+  // ============================================================
+  // UPDATE ANALYSIS PANEL (called from thermal/wind updates)
+  // ============================================================
+  function updateAnalysisPanel(visibleThermals, visibleWind) {
+    // Thermal stats
+    if (visibleThermals && visibleThermals.length > 0) {
+      const count = visibleThermals.length;
+      let sumVs = 0, maxVs = 0;
+      for (const th of visibleThermals) {
+        sumVs += th[3];
+        if (th[3] > maxVs) maxVs = th[3];
+      }
+      document.getElementById("th-count").textContent = count;
+      document.getElementById("th-avg").textContent = (sumVs / count).toFixed(1);
+      document.getElementById("th-max").textContent = maxVs.toFixed(1);
+    } else {
+      document.getElementById("th-count").textContent = "0";
+      document.getElementById("th-avg").textContent = "-";
+      document.getElementById("th-max").textContent = "-";
+    }
+
+    // Wind rose
+    drawWindRose(visibleWind || []);
+  }
+
   function updatePositions(t) {
     let activeCount = 0;
     for (const aid of Object.keys(markers)) {
@@ -718,6 +898,25 @@ require([
     }
     thermalLayer.addMany(graphics);
     document.getElementById("stat-thermals").textContent = count;
+
+    // Collect visible thermals for analysis panel
+    const visThermals = [];
+    for (let i = lo; i < thermalsSorted.length && thermalsSorted[i][4] <= endT; i++) {
+      const th = thermalsSorted[i];
+      if (soloId !== null && th[5] !== soloId) continue;
+      visThermals.push(th);
+    }
+    // Collect visible wind for wind rose (use same time window)
+    const visWind = [];
+    const wStartT = t - WIND_WINDOW, wEndT = t + WIND_WINDOW;
+    let wlo = 0, whi = windSorted.length;
+    while (wlo < whi) { const mid = (wlo + whi) >> 1; if (windSorted[mid][5] < wStartT) wlo = mid + 1; else whi = mid; }
+    for (let i = wlo; i < windSorted.length && windSorted[i][5] <= wEndT; i++) {
+      const w = windSorted[i];
+      if (soloId !== null && w[6] !== soloId) continue;
+      visWind.push(w);
+    }
+    updateAnalysisPanel(visThermals, visWind);
   }
 
   let lastWindUpdate = 0;
@@ -879,7 +1078,7 @@ require([
     if (soloAthlete && !windLayer.visible) {
       windLayer.visible = true;
       document.getElementById("toggle-wind").checked = true;
-      document.getElementById("wind-legend").style.display = "block";
+      document.getElementById("analysis-panel").style.display = "block";
     }
 
     // Force refresh all layers with new filter
@@ -940,13 +1139,9 @@ require([
   }
 
   document.getElementById("toggle-tracks").addEventListener("change", e => { trackLayer.visible = e.target.checked; });
-  document.getElementById("toggle-thermals").addEventListener("change", e => {
-    thermalLayer.visible = e.target.checked;
-    document.getElementById("thermal-legend").style.display = e.target.checked ? "block" : "none";
-  });
+  document.getElementById("toggle-thermals").addEventListener("change", e => { thermalLayer.visible = e.target.checked; });
   document.getElementById("toggle-wind").addEventListener("change", e => {
     windLayer.visible = e.target.checked;
-    document.getElementById("wind-legend").style.display = e.target.checked ? "block" : "none";
     if (e.target.checked) updateWind(currentTime, true);
   });
   document.getElementById("toggle-markers").addEventListener("change", e => { markerLayer.visible = e.target.checked; });
