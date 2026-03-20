@@ -40,17 +40,17 @@
 
     /* ── PANELS ── */
     .side-panel {
-      position: fixed; top: 50px; z-index: 50; width: 290px; max-height: calc(100vh - 110px);
-      display: none; overflow: hidden;
+      position: fixed; top: 58px; bottom: 100px; z-index: 50; width: 290px;
+      display: none; overflow: auto;
       background: var(--calcite-color-foreground-1); border: 1px solid var(--calcite-color-border-3);
       border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
     }
-    .side-panel.open { display: block; }
+    .side-panel.open { display: flex; flex-direction: column; }
     .side-panel.left { left: 8px; }
     .side-panel.right { right: 8px; }
-    .side-panel calcite-panel { --calcite-panel-max-height: calc(100vh - 120px); }
+    .side-panel calcite-panel { flex: 1; overflow: auto; }
     @media (max-width: 640px) {
-      .side-panel { width: calc(100vw - 16px); left: 8px; right: 8px; }
+      .side-panel { width: calc(100vw - 16px); left: 8px; right: 8px; bottom: 90px; }
     }
     .panel-section { padding: 12px; border-bottom: 1px solid var(--calcite-color-border-3); }
     .panel-section:last-child { border-bottom: none; }
@@ -415,10 +415,17 @@ document.getElementById("btn-help").addEventListener("click", () => { introModal
 const panelStart = document.getElementById("panel-start");
 const panelEnd = document.getElementById("panel-end");
 
-function togglePanel(panel) { panel.classList.toggle("open"); }
+function togglePanel(panel) {
+  const isOpen = panel.classList.toggle("open");
+  // Reset calcite-panel closed state when opening
+  if (isOpen) {
+    const cp = panel.querySelector("calcite-panel");
+    if (cp) cp.closed = false;
+  }
+}
 
-document.getElementById("btn-analysis").addEventListener("click", () => togglePanel(panelStart));
-document.getElementById("btn-athletes").addEventListener("click", () => togglePanel(panelEnd));
+document.getElementById("btn-analysis").addEventListener("click", () => { panelEnd.classList.remove("open"); togglePanel(panelStart); });
+document.getElementById("btn-athletes").addEventListener("click", () => { panelStart.classList.remove("open"); togglePanel(panelEnd); });
 document.getElementById("analysis-panel").addEventListener("calcitePanelClose", () => { panelStart.classList.remove("open"); });
 document.getElementById("athletes-panel").addEventListener("calcitePanelClose", () => { panelEnd.classList.remove("open"); });
 
@@ -448,11 +455,11 @@ require([
   const map = new Map({ basemap:"satellite", ground:"world-elevation", layers:[trackLayer,thermalLayer,windLayer,markerLayer] });
 
   const view = new SceneView({
-    container:"viewDiv", map, qualityProfile:"high",
+    container:"viewDiv", map, qualityProfile:"medium",
     camera: { position:{longitude:10.2,latitude:45.0,z:180000}, tilt:55, heading:25 },
     environment: {
       atmosphere:{quality:"high"},
-      lighting:{type:"sun",date:new Date("2025-06-15T10:00:00Z"),directShadowsEnabled:true,ambientOcclusionEnabled:true},
+      lighting:{type:"sun",date:new Date("2025-06-15T10:00:00Z"),directShadowsEnabled:false,ambientOcclusionEnabled:false},
       starsEnabled:false
     },
     popup:{dockEnabled:true,dockOptions:{position:"top-right",breakpoint:false}},
@@ -618,7 +625,7 @@ require([
   }
 
   function updateThermals(t, force) {
-    if (!force && Math.abs(t-lastThUpdate) < THERMAL_WINDOW*0.1) return;
+    if (!force && Math.abs(t-lastThUpdate) < THERMAL_WINDOW*0.25) return;
     lastThUpdate = t;
     thermalLayer.removeAll();
     const s=t-THERMAL_WINDOW, e=t+THERMAL_WINDOW, sid=soloAthlete?+soloAthlete:null;
@@ -635,7 +642,7 @@ require([
         geometry:new Point({longitude:th[0],latitude:th[1],z:th[2],spatialReference:{wkid:4326}}),
         symbol:new PointSymbol3D({symbolLayers:[new ObjectSymbol3DLayer({resource:{primitive:"cylinder"},material:{color:col},width:w,height:h,depth:w})]})
       }));
-      cnt++; if(cnt>4000) break;
+      cnt++; if(cnt>2000) break;
     }
     thermalLayer.addMany(gfx);
     document.getElementById("stat-thermals").textContent = cnt;
@@ -654,7 +661,7 @@ require([
   // WIND
   // ================================================================
   function updateWind(t,force) {
-    if(!force&&Math.abs(t-lastWdUpdate)<WIND_WINDOW*0.15) return;
+    if(!force&&Math.abs(t-lastWdUpdate)<WIND_WINDOW*0.3) return;
     lastWdUpdate=t; windLayer.removeAll(); if(!windLayer.visible) return;
     const s=t-WIND_WINDOW,e=t+WIND_WINDOW,sid=soloAthlete?+soloAthlete:null;
     let lo=0,hi=wind.length;
@@ -671,7 +678,7 @@ require([
         ]}),
         popupTemplate:{title:"Wind",content:`<b>${ws}</b> km/h from <b>${wd}&deg; (${COMPASS[Math.round(wd/22.5)%16]})</b><br>Alt: ${w[2]}m`}
       }));
-      cnt++; if(cnt>3000) break;
+      cnt++; if(cnt>1500) break;
     }
     windLayer.addMany(gfx);
     document.getElementById("stat-wind").textContent = cnt;
